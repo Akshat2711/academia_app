@@ -1,9 +1,11 @@
 import 'package:academia_app/screens/login_page.dart';
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // required for async init
+  await NotificationService.init(); // initialize notifications
 
-
-void main() {
   runApp(const MyApp());
 }
 
@@ -23,9 +25,7 @@ class MyApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
       ),
-      /* home: const DashboardScreen(), */
       home: const CLoginPage(),
     );
   }
 }
-
