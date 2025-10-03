@@ -19,6 +19,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   double _overallAttendance = 91.38;
   int _totalConducted = 232;
   int _totalAbsent = 20;
+  // When attendance data is missing, leave values as-is but UI will show 'No data found'
 
   @override
   void initState() {
@@ -46,11 +47,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   : (overall['total_hours_conducted'] is num)
                       ? (overall['total_hours_conducted'] as num).toInt()
                       : _totalConducted;
-              _totalAbsent = (overall['total_hours_absent'] is int)
-                  ? overall['total_hours_absent'] as int
-                  : (overall['total_hours_absent'] is num)
-                      ? (overall['total_hours_absent'] as num).toInt()
-                      : _totalAbsent;
+        _totalAbsent = (overall['total_hours_absent'] is int)
+          ? overall['total_hours_absent'] as int
+          : (overall['total_hours_absent'] is num)
+            ? (overall['total_hours_absent'] as num).toInt()
+            : _totalAbsent;
             });
 
             final coursesMap = overall['courses'];
@@ -80,9 +81,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     } catch (e) {
       // ignore and fall back to defaults
     } finally {
-      if (_courses.isEmpty) {
-        _courses = _defaultAttendanceData();
-      }
+      // Do not populate with default sample data; leave empty to indicate missing data
       setState(() => _loading = false);
     }
   }
@@ -113,7 +112,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ..._courses.map((course) => _buildCourseCard(course)),
+                  if (_courses.isNotEmpty)
+                    ..._courses.map((course) => _buildCourseCard(course))
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text('No data found', style: TextStyle(color: Colors.grey[600])),
+                    ),
                 const SizedBox(height: 80),
               ],
             ),
@@ -326,65 +331,5 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ),
     );
   }
-
-  List<Map<String, dynamic>> _defaultAttendanceData() {
-    return [
-      {
-        'title': 'Computer Networks',
-        'faculty': 'Dr. Arthy M',
-        'conducted': 20,
-        'absent': 2,
-        'percentage': 90.0,
-      },
-      {
-        'title': 'Linux and Container Technologies',
-        'faculty': 'Dr.M.Vimala Devi',
-        'conducted': 29,
-        'absent': 1,
-        'percentage': 96.55,
-      },
-      {
-        'title': 'Discrete Mathematics',
-        'faculty': 'Dr. Abhishek Banerjee',
-        'conducted': 38,
-        'absent': 5,
-        'percentage': 86.84,
-      },
-      {
-        'title': 'Formal Language and Automata',
-        'faculty': 'Ms.K.Sornalakshmi',
-        'conducted': 29,
-        'absent': 3,
-        'percentage': 89.66,
-      },
-      {
-        'title': 'Machine Learning for Data Analytics',
-        'faculty': 'Dr D Hemavathi',
-        'conducted': 27,
-        'absent': 1,
-        'percentage': 96.3,
-      },
-      {
-        'title': 'Renewable Energy Sources',
-        'faculty': 'Dr.D.Premnath',
-        'conducted': 25,
-        'absent': 3,
-        'percentage': 88.0,
-      },
-      {
-        'title': 'Community Connect',
-        'faculty': 'Dr.S.Praveenkumar',
-        'conducted': 16,
-        'absent': 0,
-        'percentage': 100.0,
-      },
-      {
-        'title': 'Indian Art Form',
-        'faculty': 'Dr.S.Praveenkumar',
-        'conducted': 18,
-        'absent': 0,
-        'percentage': 100.0,
-      },
-    ];
-  }
 }
+  // No default attendance data: show 'No data found' when _courses is empty

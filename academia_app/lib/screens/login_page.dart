@@ -85,7 +85,7 @@ class _CLoginPageState extends State<CLoginPage> {
               SizedBox(height: res.height(2)),
               Center(
                 child: Text(
-                  'Welcome Back',
+                  'Welcome to Console',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontSize: res.fontSize(7),
                         fontWeight: FontWeight.bold,

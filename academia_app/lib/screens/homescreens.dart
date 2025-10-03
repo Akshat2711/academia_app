@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import '../components/subject_info.dart';
+import '../components/faculty_info.dart';
 
 
 // ============================================================================
@@ -19,6 +21,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _courseCount = 0;
   int _totalCredits = 0;
   bool _loading = true;
+  List<Map<String, dynamic>> _courses = [];
+  Map<String, dynamic> _advisors = {
+    // advisors will be loaded from prefs if available; otherwise null
+  };
 
   @override
   void initState() {
@@ -30,52 +36,132 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final dataString = prefs.getString('userData');
-      if (dataString != null) {
+      if (dataString != null && dataString.isNotEmpty) {
         final parsedData = jsonDecode(dataString);
 
-        final student = (parsedData['attendance'] is Map && parsedData['attendance']['student_info'] != null)
-            ? Map<String, dynamic>.from(parsedData['attendance']['student_info'])
-            : null;
-
-        // overall attendance located at attendance -> attendance -> overall_attendance
-        double overall = 0.0;
+        // Load student info
         try {
-          final attendanceRoot = parsedData['attendance'];
-          if (attendanceRoot != null && attendanceRoot['attendance'] != null) {
-            final oa = attendanceRoot['attendance']['overall_attendance'];
-            if (oa is num) overall = oa.toDouble();
-            final courses = attendanceRoot['attendance']['courses'];
-            if (courses is Map) _courseCount = courses.length;
-          }
-        } catch (_) {}
-
-        // total credits from timetable if available
-        try {
-          final tt = parsedData['timetable'];
-          if (tt != null && tt['total_credits'] != null) {
-            final tc = tt['total_credits'];
-            if (tc is num) _totalCredits = tc.toInt();
-          } else if (tt != null && tt['courses'] is List) {
-            // compute credits sum if total_credits not present
-            int sum = 0;
-            for (final e in tt['courses']) {
-              if (e is Map && e['credit'] is num) sum += (e['credit'] as num).toInt();
+          if (parsedData['attendance'] != null && parsedData['attendance'] is Map) {
+            final attendanceData = parsedData['attendance'] as Map;
+            if (attendanceData['student_info'] != null && attendanceData['student_info'] is Map) {
+              studentInfo = Map<String, dynamic>.from(attendanceData['student_info']);
             }
-            if (sum > 0) _totalCredits = sum;
           }
-        } catch (_) {}
+        } catch (e) {
+          print('Error loading student info: $e');
+        }
+
+        // Load overall attendance
+        try {
+          if (parsedData['attendance'] != null && parsedData['attendance'] is Map) {
+            final attendanceRoot = parsedData['attendance'] as Map;
+            if (attendanceRoot['attendance'] != null && attendanceRoot['attendance'] is Map) {
+              final attendanceInner = attendanceRoot['attendance'] as Map;
+              final oa = attendanceInner['overall_attendance'];
+              if (oa != null && oa is num) {
+                _overallAttendance = oa.toDouble();
+              }
+              
+              final courses = attendanceInner['courses'];
+              if (courses != null && courses is Map) {
+                _courseCount = courses.length;
+              }
+            }
+          }
+        } catch (e) {
+          print('Error loading attendance: $e');
+        }
+
+        // Load timetable courses
+        try {
+          if (parsedData['timetable'] != null && parsedData['timetable'] is Map) {
+            final timetableRoot = parsedData['timetable'] as Map;
+                // Load advisors if present
+                try {
+                  if (timetableRoot['advisors'] != null && timetableRoot['advisors'] is Map) {
+                    final advisors = timetableRoot['advisors'] as Map;
+                    _advisors = Map<String, dynamic>.from(advisors.map((k, v) => MapEntry(k.toString(), v)));
+                  }
+                } catch (e) {
+                  print('Error loading advisors: $e');
+                }
+            
+            // Load courses list
+            if (timetableRoot['courses'] != null && timetableRoot['courses'] is List) {
+              final coursesList = timetableRoot['courses'] as List;
+              final List<Map<String, dynamic>> parsed = [];
+              
+              for (final e in coursesList) {
+                if (e != null && e is Map) {
+                  final code = e['course_code']?.toString() ?? '';
+                  final title = e['course_title']?.toString() ?? '';
+                  final credits = e['credit'] is num ? (e['credit'] as num).toInt() : 0;
+                  final faculty = _extractFacultyName(e['faculty_name']);
+                  final slot = e['slot']?.toString() ?? '';
+                  final room = e['room_no']?.toString() ?? e['room']?.toString() ?? '';
+                  final category = e['category']?.toString() ?? '';
+                  
+                  // Only add if it has at least a code or title
+                  if (code.isNotEmpty || title.isNotEmpty) {
+                    final course = {
+                      'code': code,
+                      'title': title,
+                      'credits': credits,
+                      'faculty': faculty,
+                      'slot': slot,
+                      'room': room,
+                      'category': category,
+                    };
+                    parsed.add(course);
+                  }
+                }
+              }
+              
+              if (parsed.isNotEmpty) {
+                _courses = parsed;
+              }
+            }
+            
+            // Load total credits
+            if (timetableRoot['total_credits'] != null && timetableRoot['total_credits'] is num) {
+              _totalCredits = (timetableRoot['total_credits'] as num).toInt();
+            } else if (timetableRoot['courses'] != null && timetableRoot['courses'] is List) {
+              // Compute credits sum if total_credits not present
+              int sum = 0;
+              final coursesList = timetableRoot['courses'] as List;
+              for (final e in coursesList) {
+                if (e != null && e is Map && e['credit'] != null && e['credit'] is num) {
+                  sum += (e['credit'] as num).toInt();
+                }
+              }
+              if (sum > 0) {
+                _totalCredits = sum;
+              }
+            }
+          }
+        } catch (e) {
+          print('Error loading timetable: $e');
+        }
 
         setState(() {
-          studentInfo = student;
-          _overallAttendance = overall;
           _loading = false;
         });
       } else {
         setState(() => _loading = false);
       }
     } catch (e) {
+      print('Error loading user data: $e');
       setState(() => _loading = false);
     }
+  }
+
+  String _extractFacultyName(dynamic facultyName) {
+    if (facultyName == null) return '';
+    final str = facultyName.toString();
+    if (str.isEmpty) return '';
+    // Extract name before parenthesis if exists
+    final parts = str.split('(');
+    return parts.first.trim();
   }
 
   @override
@@ -86,11 +172,11 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final displayName = studentInfo?['name'] ?? 'AKSHAT SRIVASTAVA';
-    final regno = studentInfo?['registration_number'] ?? 'RA2311056010161';
-    final program = studentInfo?['program'] ?? 'B.Tech - Computer Science';
-    final specialization = studentInfo?['specialization'] ?? 'CS Data Science';
-    final semester = studentInfo?['semester'] ?? '5';
+  final displayName = studentInfo?['name']?.toString() ?? 'No data found';
+  final regno = studentInfo?['registration_number']?.toString() ?? 'No data found';
+  final program = studentInfo?['program']?.toString() ?? 'No data found';
+  final specialization = studentInfo?['specialization']?.toString() ?? 'No data found';
+  final semester = studentInfo?['semester']?.toString() ?? 'No data found';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -101,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
             pinned: true,
             backgroundColor: const Color(0xFF6366F1),
             foregroundColor: Colors.white,
-            title: const Text('Academia', style: TextStyle(fontWeight: FontWeight.w600)),
+            title: const Text('Console', style: TextStyle(fontWeight: FontWeight.w600)),
             actions: [
               IconButton(
                 icon: const Icon(Icons.notifications_outlined),
@@ -116,9 +202,26 @@ class _HomeScreenState extends State<HomeScreen> {
               delegate: SliverChildListDelegate([
                 _buildProfileCard(displayName, regno, program, specialization, semester),
                 const SizedBox(height: 16),
+                const SizedBox(height: 16),
                 _buildStatsGrid(),
                 const SizedBox(height: 16),
                 _buildQuickActions(),
+                if (_courses.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'Your Courses',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ..._courses.map((course) => SubjectInfo(course: course)),
+                ],
+                // Faculty advisors card
+                FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
+
                 const SizedBox(height: 100),
               ]),
             ),

@@ -16,6 +16,7 @@ class MarksScreen extends StatefulWidget {
 class _MarksScreenState extends State<MarksScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _marks = [];
+  // No presence flag needed; show 'No data found' when _marks is empty
 
   @override
   void initState() {
@@ -30,7 +31,38 @@ class _MarksScreenState extends State<MarksScreen> {
         final raw = prefs.getString('userData');
         if (raw != null && raw.isNotEmpty) {
           final Map<String, dynamic> data = json.decode(raw);
-          final marksRoot = data['marks'];
+          // marks may be at top-level or nested under `attendance`
+          var marksRoot = data['marks'];
+
+          // Debug: print whether marks exist at top-level
+          // ignore: avoid_print
+          print('Marks at top-level present: ${data.containsKey('marks')}');
+
+          // If not present at top-level, look under attendance
+          if (marksRoot == null && data['attendance'] != null && data['attendance'] is Map) {
+            final attendanceRoot = data['attendance'] as Map;
+            // if marks is a Map
+            if (attendanceRoot['marks'] != null) {
+              var candidate = attendanceRoot['marks'];
+              // If marks were stored as a JSON-encoded String, try to decode
+              if (candidate is String && candidate.isNotEmpty) {
+                try {
+                  candidate = json.decode(candidate);
+                  // ignore: avoid_print
+                  print('Decoded string-encoded attendance.marks');
+                } catch (e) {
+                  // ignore: avoid_print
+                  print('Failed to decode attendance.marks string: $e');
+                }
+              }
+              marksRoot = candidate;
+            }
+          }
+
+          // Debug: print what we found
+          // ignore: avoid_print
+          print('marksRoot runtimeType: ${marksRoot.runtimeType}');
+
           if (marksRoot != null && marksRoot is Map) {
             final parsed = <Map<String, dynamic>>[];
             marksRoot.forEach((code, value) {
@@ -57,7 +89,9 @@ class _MarksScreenState extends State<MarksScreen> {
               }
             });
             if (parsed.isNotEmpty) {
-              setState(() => _marks = parsed);
+              setState(() {
+                _marks = parsed;
+              });
             }
           }
         }
@@ -65,7 +99,7 @@ class _MarksScreenState extends State<MarksScreen> {
     } catch (e) {
       // ignore and fall back
     } finally {
-      if (_marks.isEmpty) _marks = _getMarksData();
+      // Do not populate with defaults; show 'No data found' when empty
       setState(() => _loading = false);
     }
   }
@@ -96,7 +130,13 @@ class _MarksScreenState extends State<MarksScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          ..._marks.map((course) => _buildCourseMarksCard(course)),
+          if (_marks.isNotEmpty)
+            ..._marks.map((course) => _buildCourseMarksCard(course))
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text('No data found', style: TextStyle(color: Colors.grey[600])),
+            ),
           const SizedBox(height: 80),
         ],
       ),
@@ -205,60 +245,4 @@ class _MarksScreenState extends State<MarksScreen> {
     return Colors.red;
   }
 
-  List<Map<String, dynamic>> _getMarksData() {
-    return [
-      {
-        'title': 'Discrete Mathematics',
-        'type': 'Theory',
-        'tests': [
-          {'name': 'FT-II', 'obtained': 11.1, 'max': 15, 'percentage': 74.0},
-          {'name': 'FT-I', 'obtained': 5, 'max': 5, 'percentage': 100.0},
-        ],
-      },
-      {
-        'title': 'Formal Language and Automata',
-        'type': 'Theory',
-        'tests': [
-          {'name': 'FT-II', 'obtained': 13.8, 'max': 15, 'percentage': 92.0},
-          {'name': 'FT-I', 'obtained': 5, 'max': 5, 'percentage': 100.0},
-        ],
-      },
-      {
-        'title': 'Computer Networks',
-        'type': 'Practical',
-        'tests': [],
-      },
-      {
-        'title': 'Machine Learning for Data Analytics',
-        'type': 'Theory',
-        'tests': [
-          {'name': 'FP-I', 'obtained': 7.2, 'max': 10, 'percentage': 72.0},
-          {'name': 'PBL-I', 'obtained': 18.8, 'max': 20, 'percentage': 94.0},
-        ],
-      },
-      {
-        'title': 'Linux and Container Technologies',
-        'type': 'Theory',
-        'tests': [
-          {'name': 'FP-I', 'obtained': 7.1, 'max': 10, 'percentage': 71.0},
-          {'name': 'PBL-I', 'obtained': 18, 'max': 20, 'percentage': 90.0},
-        ],
-      },
-      {
-        'title': 'Renewable Energy Sources',
-        'type': 'Theory',
-        'tests': [
-          {'name': 'FT-II', 'obtained': 10.1, 'max': 15, 'percentage': 67.33},
-          {'name': 'FT-I', 'obtained': 3.4, 'max': 5, 'percentage': 68.0},
-        ],
-      },
-      {
-        'title': 'Indian Art Form',
-        'type': 'Practical',
-        'tests': [
-          {'name': 'FML-I', 'obtained': 25, 'max': 30, 'percentage': 83.33},
-        ],
-      },
-    ];
-  }
 }

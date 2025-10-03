@@ -1,10 +1,9 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ============================================================================
-// TIMETABLE SCREEN - Course schedule and faculty details
+// TIMETABLE SCREEN - Dynamic student timetable
 // ============================================================================
 class TimetableScreen extends StatefulWidget {
   const TimetableScreen({super.key});
@@ -15,59 +14,130 @@ class TimetableScreen extends StatefulWidget {
 
 class _TimetableScreenState extends State<TimetableScreen> {
   bool _loading = true;
+  Map<String, dynamic>? _batchTimetable;
   List<Map<String, dynamic>> _courses = [];
-  Map<String, dynamic> _advisors = {
-    'faculty_advisor': {'name': 'Dr.S.Praveenkumar', 'email': 'praveens11@srmist.edu.in', 'phone': '9444022268'},
-    'academic_advisor': {'name': 'Dr.T.Karthick', 'email': 'karthict@srmist.edu.in', 'phone': '9444417220'},
-  };
+  int _currentDay = 5; // Hardcoded as requested
+
+  // Time slots
+  List<String> _timeSlots = [];
 
   @override
   void initState() {
     super.initState();
-    _loadTimetableFromPrefs();
+    _loadTimetable();
   }
 
-  Future<void> _loadTimetableFromPrefs() async {
+  Future<void> _loadTimetable() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (prefs.containsKey('userData')) {
-        final raw = prefs.getString('userData');
-        if (raw != null && raw.isNotEmpty) {
-          final Map<String, dynamic> data = json.decode(raw);
-          final timetableRoot = data['timetable'];
-          if (timetableRoot != null) {
-            final coursesList = timetableRoot['courses'];
-            final advisors = timetableRoot['advisors'];
-            if (advisors != null && advisors is Map) {
-              setState(() {
-                _advisors = Map<String, dynamic>.from(advisors.map((k, v) => MapEntry(k.toString(), v)));
-              });
-            }
-            if (coursesList is List) {
-              final parsed = coursesList.map<Map<String, dynamic>>((e) {
-                return {
-                  'code': e['course_code'] ?? '',
-                  'title': e['course_title'] ?? '',
-                  'credits': e['credit'] is num ? (e['credit'] as num).toInt() : 0,
-                  'faculty': (e['faculty_name'] ?? '').toString().split('(').first.trim(),
-                  'slot': e['slot'] ?? '',
-                  'room': e['room_no'] ?? e['room'] ?? '',
-                  'category': e['category'] ?? '',
-                };
-              }).toList();
-              if (parsed.isNotEmpty) {
-                setState(() => _courses = parsed);
-              }
-            }
-          }
-        }
+      if (!prefs.containsKey('userData')) return;
+
+      final raw = prefs.getString('userData');
+      if (raw == null || raw.isEmpty) return;
+
+      final Map<String, dynamic> data = json.decode(raw);
+
+      // 1️⃣ Identify batch
+      final studentBatch = data['timetable']?['student_info']?['batch'] ?? '1';
+      final Map<String, dynamic> fullBatchTimetable = _hardcodedBatchTimetable();
+      final batchKey = 'Batch$studentBatch';
+
+      if (!fullBatchTimetable.containsKey(batchKey)) return;
+
+      setState(() {
+        _batchTimetable = fullBatchTimetable[batchKey];
+        _timeSlots = List<String>.from(_batchTimetable!['time_slots']);
+      });
+
+      // 2️⃣ Load student courses
+      final List<dynamic>? courseList = data['timetable']?['courses'];
+      if (courseList != null) {
+        final parsedCourses = courseList.map((e) {
+          final slot = e['slot']?.toString() ?? '';
+          final code = e['course_code']?.toString() ?? '';
+          final title = e['course_title']?.toString() ?? '';
+          return {
+            'slot': slot,
+            'display': '$code — $title',
+          };
+        }).toList();
+        setState(() {
+          _courses = List<Map<String, dynamic>>.from(parsedCourses);
+        });
       }
     } catch (e) {
-      // fall back
+      print('Error loading timetable: $e');
     } finally {
-      if (_courses.isEmpty) _courses = _defaultTimetableData();
       setState(() => _loading = false);
     }
+  }
+
+  Map<String, dynamic> _hardcodedBatchTimetable() {
+    return {
+      "Batch1": {
+        "time_slots": [
+          "08:00 - 08:50",
+          "08:50 - 09:40",
+          "09:45 - 10:35",
+          "10:40 - 11:30",
+          "11:35 - 12:25",
+          "12:30 - 01:20",
+          "01:25 - 02:15",
+          "02:20 - 03:10",
+          "03:10 - 04:00",
+          "04:00 - 04:50",
+          "04:50 - 05:30",
+          "05:30 - 06:10"
+        ],
+        "schedule": {
+          "Day 1": ["A", "A / X", "F / X", "F", "G", "P6", "P7", "P8", "P9", "P10", "L11", "L12"],
+          "Day 2": ["P11", "P12/X", "P13/X", "P14", "P15", "B", "B", "G", "G", "A", "L21", "L22"],
+          "Day 3": ["C", "C / X", "A / X", "D", "B", "P26", "P27", "P28", "P29", "P30", "L31", "L32"],
+          "Day 4": ["P31", "P32/X", "P33/X", "P34", "P35", "D", "D", "B", "E", "C", "L41", "L42"],
+          "Day 5": ["E", "E / X", "C / X", "F", "D", "P46", "P47", "P48", "P49", "P50", "L51", "L52"]
+        }
+      },
+      "Batch2": {
+        "time_slots": [
+          "08:00 - 08:50",
+          "08:50 - 09:40",
+          "09:45 - 10:35",
+          "10:40 - 11:30",
+          "11:35 - 12:25",
+          "12:30 - 01:20",
+          "01:25 - 02:15",
+          "02:20 - 03:10",
+          "03:10 - 04:00",
+          "04:00 - 04:50",
+          "04:50 - 05:30",
+          "05:30 - 06:10"
+        ],
+        "schedule": {
+          "Day 1": ["P1", "P2/X", "P3/X", "P4", "P5", "A", "A", "F", "F", "G", "L11", "L12"],
+          "Day 2": ["B", "B / X", "G / X", "G", "A", "P16", "P17", "P18", "P19", "P20", "L21", "L22"],
+          "Day 3": ["P21", "P22/X", "P23/X", "P24", "P25", "C", "C", "A", "D", "B", "L31", "L32"],
+          "Day 4": ["D", "D / X", "B / X", "E", "C", "P36", "P37", "P38", "P39", "P40", "L41", "L42"],
+          "Day 5": ["P41", "P42/X", "P43/X", "P44", "P45", "E", "E", "C", "F", "D", "L51", "L52"]
+        }
+      }
+    };
+  }
+
+  String _getCourseForSlot(String slot) {
+    for (var course in _courses) {
+      final courseSlot = course['slot'] as String;
+      // Handle multi-slot ranges like L41-L42
+      if (courseSlot.contains('-')) {
+        final parts = courseSlot.split('-');
+        for (var p in parts) {
+          if (p.trim().isEmpty) continue;
+          if (slot.contains(p.trim())) return course['display'];
+        }
+      } else if (slot.contains(courseSlot)) {
+        return course['display'];
+      }
+    }
+    return '';
   }
 
   @override
@@ -82,313 +152,110 @@ class _TimetableScreenState extends State<TimetableScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildAdvisorCard(),
-                const SizedBox(height: 20),
-                Text(
-                  'Registered Courses',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ..._courses.map((course) => _buildCourseCard(course)),
-                const SizedBox(height: 80),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildAdvisorCard() {
-    final fa = _advisors['faculty_advisor'] ?? {};
-    final aa = _advisors['academic_advisor'] ?? {};
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6366F1).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Faculty Advisors',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildAdvisorInfo(
-            'Faculty Advisor',
-            fa['name'] ?? 'Dr.S.Praveenkumar',
-            fa['email'] ?? 'praveens11@srmist.edu.in',
-            fa['phone'] ?? '9444022268',
-          ),
-          const SizedBox(height: 12),
-          const Divider(color: Colors.white24),
-          const SizedBox(height: 12),
-          _buildAdvisorInfo(
-            'Academic Advisor',
-            aa['name'] ?? 'Dr.T.Karthick',
-            aa['email'] ?? 'karthict@srmist.edu.in',
-            aa['phone'] ?? '9444417220',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdvisorInfo(String role, String name, String email, String phone) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          role,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Icon(Icons.email, color: Colors.white70, size: 14),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                email,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            const Icon(Icons.phone, color: Colors.white70, size: 14),
-            const SizedBox(width: 8),
-            Text(
-              phone,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCourseCard(Map<String, dynamic> course) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
+          : _batchTimetable == null
+              ? Center(child: Text('No timetable found', style: TextStyle(color: Colors.grey[600])))
+              : SingleChildScrollView(
+              scrollDirection: Axis.horizontal, 
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical, 
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        course['title'],
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      // Top row: Days
+                      Row(
+                        children: [
+                          const SizedBox(width: 80), // empty corner for time column
+                          ...List.generate(5, (index) {
+                            final dayLabel = 'Day ${index + 1}';
+                            final isToday = _currentDay == (index + 1);
+                            return Container(
+                              width: 120,
+                              padding: const EdgeInsets.all(8),
+                              margin: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: isToday ? Colors.indigo[200] : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  dayLabel,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isToday ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        course['code'],
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
+
+                      // Time slots + day columns (VERTICAL scrollable now)
+                      ...List.generate(_timeSlots.length, (tIndex) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Time slot column
+                            Container(
+                              width: 80,
+                              height: 60,
+                              margin: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _timeSlots[tIndex],
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ),
+                            // Day columns
+                            ...List.generate(5, (dIndex) {
+                              final dayLabel = 'Day ${dIndex + 1}';
+                              final slots = List<String>.from(_batchTimetable!['schedule'][dayLabel]);
+                              final slotCode = slots[tIndex];
+                              final courseName = _getCourseForSlot(slotCode);
+                              final isToday = _currentDay == (dIndex + 1);
+
+                              return Container(
+                                width: 120,
+                                height: 60,
+                                margin: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: courseName.isNotEmpty
+                                      ? Colors.indigo[100]
+                                      : isToday
+                                          ? Colors.indigo[50]
+                                          : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    courseName,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: courseName.isNotEmpty ? FontWeight.bold : FontWeight.normal,
+                                      color: courseName.isNotEmpty ? Colors.indigo[900] : Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                        );
+                      }),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${course['credits']} Credits',
-                    style: const TextStyle(
-                      color: Color(0xFF6366F1),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            _buildCourseDetailRow(Icons.person, course['faculty']),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCourseDetailRow(Icons.schedule, course['slot']),
-                ),
-                if ((course['room'] ?? '').toString().isNotEmpty)
-                  Expanded(
-                    child: _buildCourseDetailRow(Icons.room, course['room']),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _buildCourseDetailRow(Icons.category, course['category']),
-          ],
-        ),
-      ),
+              ),
+            )
     );
-  }
-
-  Widget _buildCourseDetailRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[700],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  List<Map<String, dynamic>> _defaultTimetableData() {
-    return [
-      {
-        'code': '21CSE216P',
-        'title': 'Linux and Container Technologies',
-        'credits': 3,
-        'faculty': 'Dr.M.Vimala Devi',
-        'slot': 'Slot B',
-        'room': 'TP 202',
-        'category': 'Professional Elective',
-      },
-      {
-        'code': '21MAB302T',
-        'title': 'Discrete Mathematics',
-        'credits': 4,
-        'faculty': 'Dr. Abhishek Banerjee',
-        'slot': 'Slot C',
-        'room': 'TP 1304',
-        'category': 'Basic Science',
-      },
-      {
-        'code': '21CSC301T',
-        'title': 'Formal Language and Automata',
-        'credits': 3,
-        'faculty': 'Ms.K.Sornalakshmi',
-        'slot': 'Slot D',
-        'room': 'TP 1304',
-        'category': 'Professional Core',
-      },
-      {
-        'code': '21CSC307P',
-        'title': 'Machine Learning for Data Analytics',
-        'credits': 3,
-        'faculty': 'Dr D Hemavathi',
-        'slot': 'Slot F',
-        'room': 'TP 1304',
-        'category': 'Professional Core',
-      },
-      {
-        'code': '21MEO112T',
-        'title': 'Renewable Energy Sources and Application',
-        'credits': 3,
-        'faculty': 'Dr.D.Premnath',
-        'slot': 'Slot G',
-        'room': 'B501',
-        'category': 'Open Elective',
-      },
-      {
-        'code': '21GNP301L',
-        'title': 'Community Connect',
-        'credits': 1,
-        'faculty': 'Dr.S.Praveenkumar',
-        'slot': 'L41-L42',
-        'room': '',
-        'category': 'Professional Core',
-      },
-      {
-        'code': '21LEM301T',
-        'title': 'Indian Art Form',
-        'credits': 0,
-        'faculty': 'Dr.S.Praveenkumar',
-        'slot': 'L51-L52',
-        'room': '',
-        'category': 'Mandatory',
-      },
-      {
-        'code': '21CSC302J',
-        'title': 'Computer Networks',
-        'credits': 4,
-        'faculty': 'Dr. Arthy M',
-        'slot': 'P29-P30',
-        'room': 'TP2CLS414',
-        'category': 'Professional Core',
-      },
-    ];
   }
 }
