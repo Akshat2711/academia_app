@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 // ============================================================================
-// TIMETABLE SCREEN - Dynamic student timetable
+// TIMETABLE SCREEN - Modern card-based timetable with horizontal scrolling
 // ============================================================================
 class TimetableScreen extends StatefulWidget {
   const TimetableScreen({super.key});
-
+  
   @override
   State<TimetableScreen> createState() => _TimetableScreenState();
 }
@@ -16,8 +17,9 @@ class _TimetableScreenState extends State<TimetableScreen> {
   bool _loading = true;
   Map<String, dynamic>? _batchTimetable;
   List<Map<String, dynamic>> _courses = [];
-  int _currentDay = 5; // Hardcoded as requested
-
+  int _currentDay = 0;
+  late PageController _pageController;
+  
   // Time slots
   List<String> _timeSlots = [];
 
@@ -27,40 +29,64 @@ class _TimetableScreenState extends State<TimetableScreen> {
     _loadTimetable();
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadTimetable() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (!prefs.containsKey('userData')) return;
-
+      
       final raw = prefs.getString('userData');
       if (raw == null || raw.isEmpty) return;
-
+      
       final Map<String, dynamic> data = json.decode(raw);
-
-      // 1️⃣ Identify batch
+      
+      // Load day order from localStorage
+      var dayOrder = data['attendance']?['day_order'];
+      if (dayOrder is String) {
+        dayOrder = int.tryParse(dayOrder) ?? 0;
+      } else if (dayOrder is! int) {
+        dayOrder = 0;
+      }
+      
+      print('DEBUG: Day order from localStorage: $dayOrder');
+      
+      // Identify batch
       final studentBatch = data['timetable']?['student_info']?['batch'] ?? '1';
       final Map<String, dynamic> fullBatchTimetable = _hardcodedBatchTimetable();
       final batchKey = 'Batch$studentBatch';
-
+      
       if (!fullBatchTimetable.containsKey(batchKey)) return;
-
+      
       setState(() {
+        _currentDay = dayOrder as int;
         _batchTimetable = fullBatchTimetable[batchKey];
         _timeSlots = List<String>.from(_batchTimetable!['time_slots']);
       });
-
-      // 2️⃣ Load student courses
+      
+      // Initialize page controller to start at current day or first day if invalid
+      final initialPage = (_currentDay >= 1 && _currentDay <= 5) ? _currentDay - 1 : 0;
+      _pageController = PageController(initialPage: initialPage);
+      
+      // Load student courses
       final List<dynamic>? courseList = data['timetable']?['courses'];
       if (courseList != null) {
         final parsedCourses = courseList.map((e) {
           final slot = e['slot']?.toString() ?? '';
           final code = e['course_code']?.toString() ?? '';
           final title = e['course_title']?.toString() ?? '';
+          final venue = e['room_no']?.toString() ?? 'TBA';
           return {
             'slot': slot,
             'display': '$code — $title',
+            'venue': venue,
           };
         }).toList();
+        
         setState(() {
           _courses = List<Map<String, dynamic>>.from(parsedCourses);
         });
@@ -123,7 +149,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
     };
   }
 
-  String _getCourseForSlot(String slot) {
+  Map<String, String> _getCourseForSlot(String slot) {
     for (var course in _courses) {
       final courseSlot = course['slot'] as String;
       // Handle multi-slot ranges like L41-L42
@@ -131,131 +157,368 @@ class _TimetableScreenState extends State<TimetableScreen> {
         final parts = courseSlot.split('-');
         for (var p in parts) {
           if (p.trim().isEmpty) continue;
-          if (slot.contains(p.trim())) return course['display'];
+          if (slot.contains(p.trim())) {
+            return {
+              'display': course['display'],
+              'venue': course['venue'] ?? 'TBA',
+            };
+          }
         }
       } else if (slot.contains(courseSlot)) {
-        return course['display'];
+        return {
+          'display': course['display'],
+          'venue': course['venue'] ?? 'TBA',
+        };
       }
     }
-    return '';
+    return {'display': '', 'venue': ''};
   }
+
+  List<Map<String, String>> _getClassesForDay(int day) {
+    if (day < 1 || day > 5 || _batchTimetable == null) {
+      return [];
+    }
+    
+    final dayLabel = 'Day $day';
+    final slots = List<String>.from(_batchTimetable!['schedule'][dayLabel]);
+    final List<Map<String, String>> dayClasses = [];
+    
+    for (int i = 0; i < slots.length && i < _timeSlots.length; i++) {
+      final slotCode = slots[i];
+      final courseInfo = _getCourseForSlot(slotCode);
+      
+      if (courseInfo['display']!.isNotEmpty) {
+        dayClasses.add({
+          'time': _timeSlots[i],
+          'course': courseInfo['display']!,
+          'classroom': courseInfo['venue']!,
+          'slot': slotCode,
+        });
+      }
+    }
+    
+    return dayClasses;
+  }
+
+  // Notification scheduling removed
+
+  Widget _buildDayCard(int day, bool isCurrentDay) {
+    final classes = _getClassesForDay(day);
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: isCurrentDay
+            ? const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isCurrentDay ? null : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isCurrentDay 
+                ? const Color(0xFF6366F1).withOpacity(0.3)
+                : Colors.black.withOpacity(0.08),
+            blurRadius: isCurrentDay ? 20 : 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Day $day',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: isCurrentDay ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.class_,
+                          size: 16,
+                          color: isCurrentDay ? Colors.white70 : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${classes.length} ${classes.length == 1 ? 'Class' : 'Classes'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isCurrentDay ? Colors.white70 : Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (isCurrentDay)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.today, color: Colors.white, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'TODAY',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          // Classes List
+          if (classes.isEmpty)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.event_busy,
+                      size: 64,
+                      color: isCurrentDay ? Colors.white54 : Colors.grey[300],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No classes scheduled',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isCurrentDay ? Colors.white70 : Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                itemCount: classes.length,
+                itemBuilder: (context, index) {
+                  final classInfo = classes[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isCurrentDay
+                          ? Colors.white.withOpacity(0.15)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isCurrentDay
+                            ? Colors.white.withOpacity(0.2)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isCurrentDay
+                                    ? Colors.white.withOpacity(0.2)
+                                    : const Color(0xFF6366F1).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                classInfo['slot']!,
+                                style: TextStyle(
+                                  color: isCurrentDay
+                                      ? Colors.white
+                                      : const Color(0xFF6366F1),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isCurrentDay
+                                    ? Colors.white.withOpacity(0.2)
+                                    : Colors.amber.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 14,
+                                    color: isCurrentDay ? Colors.white : Colors.amber[700],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    classInfo['time']!,
+                                    style: TextStyle(
+                                      color: isCurrentDay ? Colors.white : Colors.amber[700],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          classInfo['course']!,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isCurrentDay ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.room,
+                              size: 16,
+                              color: isCurrentDay ? Colors.white70 : Colors.grey[600],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              classInfo['classroom']!,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isCurrentDay ? Colors.white70 : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+ 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
         title: const Text('Timetable', style: TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: const Color(0xFF6366F1),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              
+            },
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _batchTimetable == null
-              ? Center(child: Text('No timetable found', style: TextStyle(color: Colors.grey[600])))
-              : SingleChildScrollView(
-              scrollDirection: Axis.horizontal, 
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical, 
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
+              ? Center(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Top row: Days
-                      Row(
-                        children: [
-                          const SizedBox(width: 80), // empty corner for time column
-                          ...List.generate(5, (index) {
-                            final dayLabel = 'Day ${index + 1}';
-                            final isToday = _currentDay == (index + 1);
-                            return Container(
-                              width: 120,
-                              padding: const EdgeInsets.all(8),
-                              margin: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: isToday ? Colors.indigo[200] : Colors.grey[200],
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  dayLabel,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isToday ? Colors.white : Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        ],
+                      Icon(Icons.calendar_today, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No timetable found',
+                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                       ),
-                      const SizedBox(height: 4),
-
-                      // Time slots + day columns (VERTICAL scrollable now)
-                      ...List.generate(_timeSlots.length, (tIndex) {
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Time slot column
-                            Container(
-                              width: 80,
-                              height: 60,
-                              margin: const EdgeInsets.all(2),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  _timeSlots[tIndex],
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ),
-                            // Day columns
-                            ...List.generate(5, (dIndex) {
-                              final dayLabel = 'Day ${dIndex + 1}';
-                              final slots = List<String>.from(_batchTimetable!['schedule'][dayLabel]);
-                              final slotCode = slots[tIndex];
-                              final courseName = _getCourseForSlot(slotCode);
-                              final isToday = _currentDay == (dIndex + 1);
-
-                              return Container(
-                                width: 120,
-                                height: 60,
-                                margin: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: courseName.isNotEmpty
-                                      ? Colors.indigo[100]
-                                      : isToday
-                                          ? Colors.indigo[50]
-                                          : Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    courseName,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: courseName.isNotEmpty ? FontWeight.bold : FontWeight.normal,
-                                      color: courseName.isNotEmpty ? Colors.indigo[900] : Colors.grey[600],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ],
-                        );
-                      }),
-                      const SizedBox(height: 20),
                     ],
                   ),
+                )
+              : Column(
+                  children: [
+                    // Day indicator dots
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(5, (index) {
+                          final day = index + 1;
+                          final isCurrentDay = _currentDay == day;
+                          return GestureDetector(
+                            onTap: () {
+                              _pageController.animateToPage(
+                                index,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              width: isCurrentDay ? 32 : 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: isCurrentDay
+                                    ? const Color(0xFF6366F1)
+                                    : Colors.grey[300],
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    
+                    // Page view with day cards
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: 5,
+                        itemBuilder: (context, index) {
+                          final day = index + 1;
+                          // Only highlight if day is actually current AND valid (1-5)
+                          final isCurrentDay = _currentDay == day && _currentDay >= 1 && _currentDay <= 5;
+                          return _buildDayCard(day, isCurrentDay);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            )
     );
   }
 }

@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../components/subject_info.dart';
 import '../components/faculty_info.dart';
+import '../screens/login_page.dart';
 
 
 // ============================================================================
@@ -22,9 +24,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _totalCredits = 0;
   bool _loading = true;
   List<Map<String, dynamic>> _courses = [];
-  Map<String, dynamic> _advisors = {
-    // advisors will be loaded from prefs if available; otherwise null
-  };
+  Map<String, dynamic> _advisors = {};
+  String _lastRefreshText = '';
 
   @override
   void initState() {
@@ -32,10 +33,106 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadUserData();
   }
 
+  // Format the last refresh time
+  String _formatLastRefresh(String? isoString) {
+    if (isoString == null || isoString.isEmpty) return '';
+    
+    try {
+      final lastRefresh = DateTime.parse(isoString);
+      final now = DateTime.now();
+      final difference = now.difference(lastRefresh);
+      
+      if (difference.inMinutes < 1) {
+        return 'Just now';
+      } else if (difference.inMinutes < 60) {
+        return '${difference.inMinutes}m ago';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours}h ago';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays}d ago';
+      } else {
+        return '${(difference.inDays / 7).floor()}w ago';
+      }
+    } catch (e) {
+      return '';
+    }
+  }
+
+  Future<void> _refreshData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final email = prefs.getString('userEmail');
+      final password = prefs.getString('userPassword');
+      
+      if (email == null || password == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to refresh: credentials not found')),
+          );
+        }
+        return;
+      }
+
+      final url = Uri.parse('https://academia-scrapper-api-fast.onrender.com/scrape');
+      final body = jsonEncode({
+        "email": email,
+        "password": password,
+      });
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        // Save updated data
+        await prefs.setString('userData', jsonEncode(data));
+        
+        // Update last refresh time
+        final now = DateTime.now().toIso8601String();
+        await prefs.setString('lastRefreshTime', now);
+        
+        // Reload the data
+        await _loadUserData();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Data refreshed successfully'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Refresh failed: ${response.body}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error refreshing: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final dataString = prefs.getString('userData');
+      final lastRefreshTime = prefs.getString('lastRefreshTime');
+      
+      // Update last refresh text
+      setState(() {
+        _lastRefreshText = _formatLastRefresh(lastRefreshTime);
+      });
+      
       if (dataString != null && dataString.isNotEmpty) {
         final parsedData = jsonDecode(dataString);
 
@@ -180,56 +277,95 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar.large(
-            floating: true,
-            pinned: true,
-            backgroundColor: const Color(0xFF6366F1),
-            foregroundColor: Colors.white,
-            title: const Text('Console', style: TextStyle(fontWeight: FontWeight.w600)),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _buildProfileCard(displayName, regno, program, specialization, semester),
-                const SizedBox(height: 16),
-                const SizedBox(height: 16),
-                _buildStatsGrid(),
-                const SizedBox(height: 16),
-                _buildQuickActions(),
-                if (_courses.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    'Your Courses',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        color: const Color(0xFF6366F1),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar.large(
+              floating: true,
+              pinned: true,
+              backgroundColor: const Color(0xFF6366F1),
+              foregroundColor: Colors.white,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Console', style: TextStyle(fontWeight: FontWeight.w600)),
+                  if (_lastRefreshText.isNotEmpty)
+                    Text(
+                      'Updated $_lastRefreshText',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white70,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  ..._courses.map((course) => SubjectInfo(course: course)),
                 ],
-                // Faculty advisors card
-                FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.remove('userData');
+                    await prefs.remove('userEmail');
+                    await prefs.remove('userPassword');
+                    await prefs.remove('lastRefreshTime');
 
-                const SizedBox(height: 100),
-              ]),
+                    if (!mounted) return;
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CLoginPage()),
+                      (route) => false,
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
             ),
-          ),
-        ],
+            SliverPadding(
+              padding: const EdgeInsets.all(16),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  _buildProfileCard(displayName, regno, program, specialization, semester),
+                  const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                  _buildStatsGrid(),
+                  const SizedBox(height: 16),
+                  _buildQuickActions(),
+                  if (_courses.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      'Your Courses',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ..._courses.map((course) => SubjectInfo(course: course)),
+                  ],
+                  // Faculty advisors card
+                  FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
+
+                  const SizedBox(height: 100),
+                ]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+
+
+
+
+
+
+
 
   Widget _buildProfileCard(String name, String regno, String program, String specialization, String semester) {
     return TweenAnimationBuilder(

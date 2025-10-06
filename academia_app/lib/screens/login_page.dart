@@ -27,9 +27,12 @@ class _CLoginPageState extends State<CLoginPage> {
     });
 
     final url = Uri.parse('https://academia-scrapper-api-fast.onrender.com/scrape');
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    
     final body = jsonEncode({
-      "email": _emailController.text.trim(),
-      "password": _passwordController.text.trim(),
+      "email": email,
+      "password": password,
     });
 
     try {
@@ -45,6 +48,13 @@ class _CLoginPageState extends State<CLoginPage> {
         // Save locally
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('userData', jsonEncode(data));
+        
+        // Save credentials for refresh functionality
+        await prefs.setString('userEmail', email);
+        await prefs.setString('userPassword', password);
+        
+        // Save last refresh time
+        await prefs.setString('lastRefreshTime', DateTime.now().toIso8601String());
 
         // Navigate to next page (replace NextPage with your page)
         if (mounted) {
