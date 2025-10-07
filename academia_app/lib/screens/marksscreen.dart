@@ -14,6 +14,18 @@ class MarksScreen extends StatefulWidget {
 }
 
 class _MarksScreenState extends State<MarksScreen> {
+  // --- COLOR PALETTE ---
+  // Pitch Black Background
+  static const Color _pitchBlack = Color(0xFF000000);
+  // Neon Green Accent
+  static const Color _neonGreen = Color(0xFF39FF14);
+  // White Foreground/Text
+  static const Color _white = Colors.white;
+  // Fallback/Warning colors using neon theme
+  static const Color _neonYellow = Color(0xFFFFCC33);
+  static const Color _neonRed = Color(0xFFFF4081);
+
+
   bool _loading = true;
   List<Map<String, dynamic>> _marks = [];
   // No presence flag needed; show 'No data found' when _marks is empty
@@ -108,23 +120,23 @@ class _MarksScreenState extends State<MarksScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: _pitchBlack, // ⬅️ Pitch Black
         appBar: AppBar(
-          title: const Text('Marks', style: TextStyle(fontWeight: FontWeight.w600)),
-          backgroundColor: const Color(0xFF6366F1),
-          foregroundColor: Colors.white,
+          title: const Text('Marks', style: TextStyle(fontWeight: FontWeight.w600, color: _white)), // ⬅️ White text
+          backgroundColor: _pitchBlack, // ⬅️ Pitch Black
+          foregroundColor: _neonGreen, // ⬅️ Neon Green icons/buttons
           elevation: 0,
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator(color: _neonGreen)), // ⬅️ Neon Green loading indicator
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: _pitchBlack, // ⬅️ Pitch Black
       appBar: AppBar(
-        title: const Text('Marks', style: TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: const Color(0xFF6366F1),
-        foregroundColor: Colors.white,
+        title: const Text('Marks', style: TextStyle(fontWeight: FontWeight.w600, color: _white)), // ⬅️ White text
+        backgroundColor: _pitchBlack, // ⬅️ Pitch Black
+        foregroundColor: _neonGreen, // ⬅️ Neon Green icons/buttons
         elevation: 0,
       ),
       body: ListView(
@@ -135,7 +147,10 @@ class _MarksScreenState extends State<MarksScreen> {
           else
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text('No data found', style: TextStyle(color: Colors.grey[600])),
+              child: Text(
+                'No data found',
+                style: TextStyle(color: _white.withOpacity(0.6)), // ⬅️ White text
+              ),
             ),
           const SizedBox(height: 80),
         ],
@@ -147,13 +162,14 @@ class _MarksScreenState extends State<MarksScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _pitchBlack, // ⬅️ Pitch Black Card
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _neonGreen.withOpacity(0.5), width: 1), // Neon Green Border
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: _neonGreen.withOpacity(0.15), // Neon Green glow
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 0),
           ),
         ],
       ),
@@ -167,18 +183,22 @@ class _MarksScreenState extends State<MarksScreen> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: _white, // ⬅️ White text
               ),
             ),
             const SizedBox(height: 4),
             Text(
               course['type'],
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 13, color: _neonGreen.withOpacity(0.8)), // ⬅️ Neon Green for type
             ),
             if (course['tests'].isNotEmpty) ...[
               const SizedBox(height: 16),
+              // Separator for the list of tests
+              Divider(color: _white.withOpacity(0.1), height: 1), 
+              const SizedBox(height: 8),
               ...course['tests'].map<Widget>((test) {
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: 12, top: 4),
                   child: Row(
                     children: [
                       Expanded(
@@ -190,6 +210,7 @@ class _MarksScreenState extends State<MarksScreen> {
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
+                                color: _white, // ⬅️ White text
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -197,7 +218,7 @@ class _MarksScreenState extends State<MarksScreen> {
                               '${test['obtained']} / ${test['max']}',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey[600],
+                                color: _white.withOpacity(0.7), // ⬅️ White score detail
                               ),
                             ),
                           ],
@@ -210,15 +231,23 @@ class _MarksScreenState extends State<MarksScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: _getScoreColor(test['percentage'])
-                              .withOpacity(0.1),
+                              .withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _getScoreColor(test['percentage']).withOpacity(0.7), width: 1), // Border to enhance neon look
                         ),
                         child: Text(
                           '${test['percentage'].toStringAsFixed(0)}%',
                           style: TextStyle(
-                            color: _getScoreColor(test['percentage']),
+                            color: _getScoreColor(test['percentage']), // Text color matches glow
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 5.0,
+                                color: _getScoreColor(test['percentage']).withOpacity(0.5),
+                                offset: const Offset(0, 0),
+                              ),
+                            ]
                           ),
                         ),
                       ),
@@ -230,7 +259,7 @@ class _MarksScreenState extends State<MarksScreen> {
               const SizedBox(height: 12),
               Text(
                 'No tests recorded',
-                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                style: TextStyle(fontSize: 14, color: _white.withOpacity(0.5)), // ⬅️ White text
               ),
             ],
           ],
@@ -240,9 +269,9 @@ class _MarksScreenState extends State<MarksScreen> {
   }
 
   Color _getScoreColor(double percentage) {
-    if (percentage >= 85) return Colors.green;
-    if (percentage >= 70) return Colors.orange;
-    return Colors.red;
+    if (percentage >= 85) return _neonGreen; // ⬅️ Neon Green for High Score
+    if (percentage >= 70) return _neonYellow; // ⬅️ Neon Yellow for Medium Score
+    return _neonRed; // ⬅️ Neon Red for Low Score
   }
 
 }

@@ -18,6 +18,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Define the new primary colors
+  static const Color _primaryColor = Colors.orange; // New primary accent color
+  static const Color _backgroundColor = Colors.black; // New pitch black background
+
   Map<String, dynamic>? studentInfo;
   double _overallAttendance = 0.0;
   int _courseCount = 0;
@@ -265,7 +269,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: _backgroundColor, // Use black background for loading
+        body: Center(child: CircularProgressIndicator(color: _primaryColor)), // Use orange for indicator
       );
     }
 
@@ -276,17 +281,17 @@ class _HomeScreenState extends State<HomeScreen> {
   final semester = studentInfo?['semester']?.toString() ?? 'No data found';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: _backgroundColor, // Pitch black background
       body: RefreshIndicator(
         onRefresh: _refreshData,
-        color: const Color(0xFF6366F1),
+        color: _primaryColor, // Orange refresh indicator color
         child: CustomScrollView(
           slivers: [
             SliverAppBar.large(
               floating: true,
               pinned: true,
-              backgroundColor: const Color(0xFF6366F1),
-              foregroundColor: Colors.white,
+              backgroundColor: const Color.fromARGB(255, 0, 0, 0), // Orange AppBar background
+              foregroundColor: Colors.white, // White text/icon color
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -305,6 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.logout),
+                  color: const Color.fromARGB(255, 255, 158, 67),
                   onPressed: () async {
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove('userData');
@@ -341,13 +347,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
+                        color: Colors.white, // White text for section title
                       ),
                     ),
                     const SizedBox(height: 12),
+                    // Ensure SubjectInfo uses white/orange/black theme if possible
                     ..._courses.map((course) => SubjectInfo(course: course)),
                   ],
                   // Faculty advisors card
+                  // Ensure FacultyInfo uses white/orange/black theme if possible
                   FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
 
                   const SizedBox(height: 100),
@@ -383,15 +391,16 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          // Use an orange gradient for the profile card
+          gradient: LinearGradient(
+            colors: [const Color.fromARGB(201, 255, 153, 0), _primaryColor],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF6366F1).withOpacity(0.3),
+              color: _primaryColor.withOpacity(0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -450,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, color: Colors.white70, size: 18),
+        const Icon(Icons.info_outline, color: Colors.white70, size: 18), // Used a standard icon for dark theme visibility
         const SizedBox(width: 12),
         Text(
           text,
@@ -478,11 +487,12 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Row(
         children: [
-          Expanded(child: _buildStatCard(attendance.toStringAsFixed(2), 'Attendance', Colors.green)),
+          // Keeping original colors for differentiation, but adjusting 'Credits' to primary color
+          Expanded(child: _buildStatCard(attendance.toStringAsFixed(2), 'Attendance', Colors.greenAccent[400]!)), 
           const SizedBox(width: 12),
-          Expanded(child: _buildStatCard(courses, 'Courses', Colors.blue)),
+          Expanded(child: _buildStatCard(courses, 'Courses', Colors.cyanAccent[400]!)),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatCard(credits, 'Credits', Colors.orange)),
+          Expanded(child: _buildStatCard(credits, 'Credits', _primaryColor)), // Orange for Credits
         ],
       ),
     );
@@ -492,11 +502,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF1C1C1C), // Dark grey for contrast on black background
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -509,13 +519,13 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: color,
+              color: color, // Use accent color
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: const TextStyle(fontSize: 12, color: Colors.white70), // White/light text
           ),
         ],
       ),
@@ -531,27 +541,31 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
+            color: Colors.white, // White text for section title
           ),
         ),
         const SizedBox(height: 12),
-        _buildActionButton(Icons.assignment, 'View Assignments', Colors.purple),
+        _buildActionButton(Icons.announcement_outlined, 'Announcement', _primaryColor), // Orange
         const SizedBox(height: 8),
-        _buildActionButton(Icons.payment, 'Fee Payment', Colors.teal),
+        _buildActionButton(Icons.calendar_month, 'calender', _primaryColor), // orange
         const SizedBox(height: 8),
-        _buildActionButton(Icons.library_books, 'Library', Colors.indigo),
+        _buildActionButton(Icons.link_sharp, 'Important Links', _primaryColor), // Orange
       ],
     );
   }
 
   Widget _buildActionButton(IconData icon, String text, Color color) {
+    // Choose a contrasting color for the icon container based on the action color
+    final iconContainerColor = color == Colors.white ? _primaryColor.withOpacity(0.1) : _primaryColor.withOpacity(0.2);
+    final iconColor = color == Colors.white ? Colors.white : color;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF1C1C1C), // Dark grey for contrast on black background
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -569,10 +583,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: iconContainerColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: color, size: 22),
+                  child: Icon(icon, color: iconColor, size: 22),
                 ),
                 const SizedBox(width: 16),
                 Text(
@@ -580,10 +594,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
+                    color: Colors.white,
                   ),
                 ),
                 const Spacer(),
-                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white54),
               ],
             ),
           ),
@@ -591,5 +606,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 }

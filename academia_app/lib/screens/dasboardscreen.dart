@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-//custom imports
+// Custom imports
 import 'attendancescreen.dart';
 import 'homescreens.dart';
 import 'marksscreen.dart';
@@ -55,9 +55,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
+              
+              blurRadius: 10,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
@@ -67,27 +67,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
             setState(() => _currentIndex = index);
           },
           elevation: 0,
-          backgroundColor: Colors.white,
-          indicatorColor: const Color(0xFF6366F1).withOpacity(0.1),
+          backgroundColor: Colors.black, // 🖤 Black background
+          indicatorColor: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.2), 
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
+              icon: Icon(Icons.home_outlined, color: Colors.white),
+              selectedIcon: Icon(Icons.home, color: Colors.orange),
               label: 'Home',
             ),
             NavigationDestination(
-              icon: Icon(Icons.calendar_today_outlined),
-              selectedIcon: Icon(Icons.calendar_today),
+              icon: Icon(Icons.calendar_today_outlined, color: Colors.white),
+              selectedIcon: Icon(Icons.calendar_today, color: Color.fromARGB(255, 228, 159, 255)),
               label: 'Attendance',
             ),
             NavigationDestination(
-              icon: Icon(Icons.grade_outlined),
-              selectedIcon: Icon(Icons.grade),
+              icon: Icon(Icons.grade_outlined, color: Colors.white),
+              selectedIcon: Icon(Icons.grade, color: Color.fromARGB(255, 157, 248, 160)),
               label: 'Marks',
             ),
             NavigationDestination(
-              icon: Icon(Icons.schedule_outlined),
-              selectedIcon: Icon(Icons.schedule),
+              icon: Icon(Icons.schedule_outlined, color: Colors.white),
+              selectedIcon: Icon(Icons.schedule, color: Color.fromARGB(255, 253, 57, 116)),
               label: 'Timetable',
             ),
           ],

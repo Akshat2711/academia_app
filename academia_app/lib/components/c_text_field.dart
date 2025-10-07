@@ -31,8 +31,13 @@ class CTextField extends StatelessWidget {
         ),
         focusedBorder: UnderlineInputBorder(
           borderSide: BorderSide(
-              color: Theme.of(context).colorScheme.inversePrimary),
+              color: const Color.fromARGB(255, 255, 199, 254)),
         ),
+      ),
+
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: res.fontSize(4), // 4% of screen width
       ),
     );
   }

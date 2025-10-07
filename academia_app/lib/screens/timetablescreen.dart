@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/day_order_card.dart';
 
 
 // ============================================================================
@@ -14,6 +15,12 @@ class TimetableScreen extends StatefulWidget {
 }
 
 class _TimetableScreenState extends State<TimetableScreen> {
+  // --- COLOR PALETTE ---
+  static const Color _pitchBlack = Color(0xFF000000); // Pitch Black Background
+  static const Color _neonPink = Color(0xFFFF1493);  // Neon Reddish-Pink (Deep Pink)
+  static const Color _white = Colors.white;          // White Foreground/Text
+  static const Color _cardBackground = Color(0xFF1A1A1A); // Slightly lighter black for card base
+
   bool _loading = true;
   Map<String, dynamic>? _batchTimetable;
   List<Map<String, dynamic>> _courses = [];
@@ -31,7 +38,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
   @override
   void dispose() {
-    _pageController.dispose();
+    // Check if _pageController has been initialized before disposing
+    if (mounted && _batchTimetable != null) {
+      _pageController.dispose();
+    }
     super.dispose();
   }
 
@@ -53,6 +63,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
         dayOrder = 0;
       }
       
+      // ignore: avoid_print
       print('DEBUG: Day order from localStorage: $dayOrder');
       
       // Identify batch
@@ -60,7 +71,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
       final Map<String, dynamic> fullBatchTimetable = _hardcodedBatchTimetable();
       final batchKey = 'Batch$studentBatch';
       
-      if (!fullBatchTimetable.containsKey(batchKey)) return;
+      if (!fullBatchTimetable.containsKey(batchKey)) {
+        setState(() => _loading = false);
+        return;
+      }
       
       setState(() {
         _currentDay = dayOrder as int;
@@ -92,6 +106,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
         });
       }
     } catch (e) {
+      // ignore: avoid_print
       print('Error loading timetable: $e');
     } finally {
       setState(() => _loading = false);
@@ -180,7 +195,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
     }
     
     final dayLabel = 'Day $day';
-    final slots = List<String>.from(_batchTimetable!['schedule'][dayLabel]);
+    final schedule = _batchTimetable!['schedule'];
+    if (schedule == null || schedule[dayLabel] == null) {
+      return [];
+    }
+
+    final slots = List<String>.from(schedule[dayLabel]);
     final List<Map<String, String>> dayClasses = [];
     
     for (int i = 0; i < slots.length && i < _timeSlots.length; i++) {
@@ -200,271 +220,44 @@ class _TimetableScreenState extends State<TimetableScreen> {
     return dayClasses;
   }
 
-  // Notification scheduling removed
+ 
 
-  Widget _buildDayCard(int day, bool isCurrentDay) {
-    final classes = _getClassesForDay(day);
-    
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: isCurrentDay
-            ? const LinearGradient(
-                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: isCurrentDay ? null : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: isCurrentDay 
-                ? const Color(0xFF6366F1).withOpacity(0.3)
-                : Colors.black.withOpacity(0.08),
-            blurRadius: isCurrentDay ? 20 : 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Day $day',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: isCurrentDay ? Colors.white : const Color(0xFF1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.class_,
-                          size: 16,
-                          color: isCurrentDay ? Colors.white70 : Colors.grey[600],
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${classes.length} ${classes.length == 1 ? 'Class' : 'Classes'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isCurrentDay ? Colors.white70 : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                if (isCurrentDay)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.today, color: Colors.white, size: 16),
-                        SizedBox(width: 6),
-                        Text(
-                          'TODAY',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          
-          // Classes List
-          if (classes.isEmpty)
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.event_busy,
-                      size: 64,
-                      color: isCurrentDay ? Colors.white54 : Colors.grey[300],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No classes scheduled',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: isCurrentDay ? Colors.white70 : Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                itemCount: classes.length,
-                itemBuilder: (context, index) {
-                  final classInfo = classes[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isCurrentDay
-                          ? Colors.white.withOpacity(0.15)
-                          : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isCurrentDay
-                            ? Colors.white.withOpacity(0.2)
-                            : Colors.transparent,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isCurrentDay
-                                    ? Colors.white.withOpacity(0.2)
-                                    : const Color(0xFF6366F1).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                classInfo['slot']!,
-                                style: TextStyle(
-                                  color: isCurrentDay
-                                      ? Colors.white
-                                      : const Color(0xFF6366F1),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isCurrentDay
-                                    ? Colors.white.withOpacity(0.2)
-                                    : Colors.amber.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.access_time,
-                                    size: 14,
-                                    color: isCurrentDay ? Colors.white : Colors.amber[700],
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    classInfo['time']!,
-                                    style: TextStyle(
-                                      color: isCurrentDay ? Colors.white : Colors.amber[700],
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          classInfo['course']!,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isCurrentDay ? Colors.white : const Color(0xFF1E293B),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.room,
-                              size: 16,
-                              color: isCurrentDay ? Colors.white70 : Colors.grey[600],
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              classInfo['classroom']!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isCurrentDay ? Colors.white70 : Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
+ 
  
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: _pitchBlack, // ⬅️ Pitch Black
       appBar: AppBar(
-        title: const Text('Timetable', style: TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: const Color(0xFF6366F1),
-        foregroundColor: Colors.white,
+        title: const Text('Timetable', style: TextStyle(fontWeight: FontWeight.w600, color: _white)), // ⬅️ White Text
+        backgroundColor: _pitchBlack, // ⬅️ Pitch Black
+        foregroundColor: _neonPink, // ⬅️ Neon Pink Icon
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.refresh), // Changed to refresh icon for more appropriate action
             onPressed: () {
-              
+              // Reload functionality goes here
+              setState(() => _loading = true);
+              _loadTimetable();
             },
             tooltip: 'Refresh',
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: _neonPink)) // ⬅️ Neon Pink Loading Indicator
           : _batchTimetable == null
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.calendar_today, size: 64, color: Colors.grey[400]),
+                      Icon(Icons.calendar_today, size: 64, color: _neonPink.withOpacity(0.5)), // ⬅️ Neon Pink Icon
                       const SizedBox(height: 16),
                       Text(
                         'No timetable found',
-                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 18, color: _white.withOpacity(0.7)), // ⬅️ White Text
                       ),
                     ],
                   ),
@@ -478,7 +271,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(5, (index) {
                           final day = index + 1;
-                          final isCurrentDay = _currentDay == day;
+                          // Only check if it's the valid current day
+                          final isCurrentDay = _currentDay == day && _currentDay >= 1 && _currentDay <= 5;
                           return GestureDetector(
                             onTap: () {
                               _pageController.animateToPage(
@@ -494,8 +288,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
                               height: 8,
                               decoration: BoxDecoration(
                                 color: isCurrentDay
-                                    ? const Color(0xFF6366F1)
-                                    : Colors.grey[300],
+                                    ? _neonPink // ⬅️ Neon Pink Active Dot
+                                    : _white.withOpacity(0.3), // ⬅️ White Inactive Dot
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),
@@ -509,11 +303,18 @@ class _TimetableScreenState extends State<TimetableScreen> {
                       child: PageView.builder(
                         controller: _pageController,
                         itemCount: 5,
+                        onPageChanged: (index) {
+                          // Keep the Day Order highlighting separate
+                          setState(() {
+                            // Can track which page the user is viewing, if needed for complex logic
+                            // _currentViewedDay = index + 1; 
+                          });
+                        },
                         itemBuilder: (context, index) {
                           final day = index + 1;
-                          // Only highlight if day is actually current AND valid (1-5)
                           final isCurrentDay = _currentDay == day && _currentDay >= 1 && _currentDay <= 5;
-                          return _buildDayCard(day, isCurrentDay);
+                          final classes = _getClassesForDay(day);
+                          return DayOrderCard(day: day, isCurrentDay: isCurrentDay, classes: classes);
                         },
                       ),
                     ),

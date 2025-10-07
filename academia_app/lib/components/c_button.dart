@@ -16,7 +16,7 @@ class CButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          backgroundColor: const Color.fromARGB(255, 255, 70, 190),
           padding: EdgeInsets.symmetric(vertical: res.height(2)), // 2% of screen height
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(res.width(3)), // 3% of screen width

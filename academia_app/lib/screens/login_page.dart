@@ -87,7 +87,7 @@ class _CLoginPageState extends State<CLoginPage> {
     final res = ResponsiveHelper(context);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(res.width(6)),
@@ -101,6 +101,7 @@ class _CLoginPageState extends State<CLoginPage> {
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontSize: res.fontSize(7),
                         fontWeight: FontWeight.bold,
+                        color: const Color.fromARGB(255, 255, 255, 255),
                       ),
                 ),
               ),

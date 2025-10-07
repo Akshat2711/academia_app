@@ -11,7 +11,9 @@ class SubjectInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = (course['title'] ?? '').toString();
     final code = (course['code'] ?? '').toString();
-    final credits = course['credits'] is num ? (course['credits'] as num).toString() : (course['credits'] ?? '').toString();
+    final credits = course['credits'] is num
+        ? (course['credits'] as num).toString()
+        : (course['credits'] ?? '').toString();
     final faculty = (course['faculty'] ?? '').toString();
     final slot = (course['slot'] ?? '').toString();
     final room = (course['room'] ?? '').toString();
@@ -20,13 +22,14 @@ class SubjectInfo extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.black, // 🖤 Background changed to black
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange, width: 2), // 🟠 Orange border
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.orange.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -51,14 +54,15 @@ class SubjectInfo extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 255, 255, 255), // 🟠 Orange text
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             code,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: Colors.orange, // 🟠 Orange text
                             ),
                           ),
                         ],
@@ -67,13 +71,14 @@ class SubjectInfo extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6366F1).withOpacity(0.1),
+                        color: Colors.orange.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange, width: 1),
                       ),
                       child: Text(
                         '$credits Credits',
                         style: const TextStyle(
-                          color: Color(0xFF6366F1),
+                          color: Color.fromARGB(255, 255, 255, 255), // 🟠 Orange text
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -82,7 +87,7 @@ class SubjectInfo extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Divider(height: 1),
+                const Divider(height: 1, color: Colors.orange), // 🟠 Orange divider
                 const SizedBox(height: 12),
                 _buildCourseDetailRow(Icons.person, faculty),
                 const SizedBox(height: 8),
@@ -106,14 +111,14 @@ class SubjectInfo extends StatelessWidget {
   Widget _buildCourseDetailRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16, color: const Color.fromARGB(255, 255, 255, 255)), // 🟠 Icon color
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 13,
-              color: Colors.grey[700],
+              color: Colors.orange, // 🟠 Text color
             ),
           ),
         ),
