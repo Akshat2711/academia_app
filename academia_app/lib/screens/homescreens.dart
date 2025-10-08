@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../components/subject_info.dart';
 import '../components/faculty_info.dart';
 import '../screens/login_page.dart';
+import 'calender_screen.dart';
 
 
 // ============================================================================
@@ -547,14 +548,24 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 12),
         _buildActionButton(Icons.announcement_outlined, 'Announcement', _primaryColor), // Orange
         const SizedBox(height: 8),
-        _buildActionButton(Icons.calendar_month, 'calender', _primaryColor), // orange
+        _buildActionButton(
+          Icons.calendar_month,
+          'calender',
+          _primaryColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CalendarScreen()),
+            );
+          },
+        ), // orange
         const SizedBox(height: 8),
         _buildActionButton(Icons.link_sharp, 'Important Links', _primaryColor), // Orange
       ],
     );
   }
 
-  Widget _buildActionButton(IconData icon, String text, Color color) {
+  Widget _buildActionButton(IconData icon, String text, Color color, {VoidCallback? onTap}) {
     // Choose a contrasting color for the icon container based on the action color
     final iconContainerColor = color == Colors.white ? _primaryColor.withOpacity(0.1) : _primaryColor.withOpacity(0.2);
     final iconColor = color == Colors.white ? Colors.white : color;
@@ -571,11 +582,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: Material(
+        child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () {},
+          onTap: onTap ?? () {},
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
