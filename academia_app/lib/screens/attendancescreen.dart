@@ -24,9 +24,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   bool _loading = true;
   List<Map<String, dynamic>> _courses = [];
-  double _overallAttendance = 91.38;
-  int _totalConducted = 232;
-  int _totalAbsent = 20;
+  double _overallAttendance =0;
+  int _totalConducted = 0;
+  int _totalAbsent =0;
   // When attendance data is missing, leave values as-is but UI will show 'No data found'
 
   @override
@@ -136,67 +136,54 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _buildOverallCard() {
-    final present = (_totalConducted - _totalAbsent).toString();
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        // Neon Pink Glow Effect
-        color: _pitchBlack, // Background for the card
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: _neonPink.withOpacity(0.5), // ⬅️ Neon Pink shadow
-            blurRadius: 25,
-            spreadRadius: -5,
-            offset: const Offset(0, 0),
+Widget _buildOverallCard() {
+  final present = (_totalConducted - _totalAbsent).toString();
+  return Container(
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      // 👇 Switched to Pink background color
+      color: const Color.fromARGB(255, 254, 112, 254), // New Background for the card
+      borderRadius: BorderRadius.circular(20),
+      // 💡 Updated border to White
+      border: Border.all(color: const Color.fromARGB(255, 255, 112, 226).withOpacity(0.7), width: 1.5), // White border
+    ),
+    child: Column(
+      children: [
+        Text(
+          'Overall Attendance',
+          // 💡 Text color changed to Black (or a dark color) for contrast on pink
+          style: TextStyle(color: _pitchBlack.withOpacity(0.8), fontSize: 16),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '${_overallAttendance.toStringAsFixed(2)}%',
+          // 👇 Switched to White text color for the main value
+          style: const TextStyle(
+            color: _white, // Main value color changed to White
+            fontSize: 48,
+            fontWeight: FontWeight.bold,
+
           ),
-          BoxShadow(
-            color: _neonPink.withOpacity(0.3), // Secondary glow
-            blurRadius: 50,
-            spreadRadius: -10,
-            offset: const Offset(0, 0),
-          ),
-        ],
-        border: Border.all(color: _neonPink.withOpacity(0.7), width: 1.5), // Neon Pink border
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Overall Attendance',
-            style: TextStyle(color: _white.withOpacity(0.8), fontSize: 16), // ⬅️ White text
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${_overallAttendance.toStringAsFixed(2)}%',
-            style: const TextStyle(
-              color: _neonPink, // ⬅️ Neon Pink for main value
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(
-                  blurRadius: 10.0,
-                  color: _neonPink,
-                  offset: Offset(0, 0),
-                ),
-              ]
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildOverallStat('$_totalConducted', 'Conducted'),
-              Container(width: 1.5, height: 30, color: _neonPink.withOpacity(0.5)), // ⬅️ Neon Pink divider
-              _buildOverallStat(present, 'Present'),
-              Container(width: 1.5, height: 30, color: _neonPink.withOpacity(0.5)), // ⬅️ Neon Pink divider
-              _buildOverallStat('$_totalAbsent', 'Absent'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            // Note: _buildOverallStat needs to handle the new text color inside it,
+            // or you'll have to show its implementation to change its text color.
+            _buildOverallStat('$_totalConducted', 'Conducted'),
+            // 💡 Divider color updated to White
+            Container(width: 1.5, height: 30, color: _white.withOpacity(0.5)),
+            _buildOverallStat(present, 'Present'),
+            // 💡 Divider color updated to White
+            Container(width: 1.5, height: 30, color: _white.withOpacity(0.5)),
+            _buildOverallStat('$_totalAbsent', 'Absent'),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildOverallStat(String value, String label) {
     return Column(
@@ -217,129 +204,174 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _buildCourseCard(Map<String, dynamic> course) {
-    final percentage = (course['percentage'] is num) ? (course['percentage'] as num).toDouble() : 0.0;
-    
-    // --- Custom Neon-themed Color Logic ---
-    Color color = _neonPink; // Default/Bad attendance color
-    Color chipBackgroundColor = _neonPink.withOpacity(0.1);
-    
-    if (percentage >= 85) {
-      color = const Color.fromARGB(255, 221, 54, 255); // Neon Green for Excellent (>= 85%)
-    } else if (percentage >= 75) {
-      color = const Color.fromARGB(255, 239, 197, 246); // Neon Yellow/Orange for OK (>= 75%)
-    }
-    chipBackgroundColor = color.withOpacity(0.1);
+Widget _buildCourseCard(Map<String, dynamic> course) {
+  final percentage = (course['percentage'] is num)
+      ? (course['percentage'] as num).toDouble()
+      : 0.0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: _pitchBlack, // ⬅️ Pitch Black Card Background
+  final int conducted = course['conducted'] is num ? (course['conducted'] as num).toInt() : 0;
+  final int absent = course['absent'] is num ? (course['absent'] as num).toInt() : 0;
+  final int attended = (conducted - absent).clamp(0, conducted);
+
+  // Target tracker vars
+  String targetText = '';
+  Color targetColor = _neonPink;
+  IconData targetIcon = Icons.info_outline;
+
+  if (conducted == 0) {
+    targetText = 'No classes recorded';
+    targetColor = Colors.grey;
+    targetIcon = Icons.info_outline;
+  } else {
+    final double currentPct = conducted > 0 ? (attended / conducted * 100) : 0.0;
+
+    if (currentPct < 75.0) {
+      // Need to attend x more classes (attend all of them) to reach 75%
+      final double rawNeeded = (0.75 * conducted - attended) / 0.25; // can be large
+      final int need = rawNeeded <= 0 ? 0 : rawNeeded.ceil();
+      targetIcon = Icons.trending_up;
+      targetColor = Colors.redAccent;
+      targetText = need == 0
+          ? 'Almost at 75%'
+          : 'Attend $need more class${need > 1 ? 'es' : ''} to reach 75%';
+    } else {
+      // Can miss up to m classes (attended unchanged) and remain >= 75%
+      final double rawMargin = (attended / 0.75) - conducted;
+      final int margin = rawMargin < 0 ? 0 : rawMargin.floor();
+
+      if (margin <= 0) {
+        targetIcon = Icons.error_outline;
+        targetColor = const Color.fromARGB(255, 255, 255, 255);
+        targetText = 'At 75% threshold — avoid missing classes';
+      } else {
+        targetIcon = Icons.trending_down;
+        targetColor = const Color.fromARGB(255, 251, 218, 255);
+        targetText = 'Can miss $margin class${margin > 1 ? 'es' : ''} and stay ≥75%';
+      }
+    }
+  }
+
+  // --- Color logic for the card chip (keeps your previous theme) ---
+  Color color = _neonPink;
+  Color chipBackgroundColor = _neonPink.withOpacity(0.1);
+  if (percentage >= 85) {
+    color = const Color.fromARGB(255, 221, 54, 255);
+  } else if (percentage >= 75) {
+    color = const Color.fromARGB(255, 239, 197, 246);
+  }
+  chipBackgroundColor = color.withOpacity(0.1);
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    decoration: BoxDecoration(
+      color: _pitchBlack,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: color.withOpacity(0.5), width: 1),
+      boxShadow: [
+        BoxShadow(
+          color: color.withOpacity(0.15),
+          blurRadius: 15,
+          offset: const Offset(0, 0),
+        ),
+      ],
+    ),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.5), width: 1), // Colored border based on percentage
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.15), // Soft glow based on percentage
-            blurRadius: 15,
-            offset: const Offset(0, 0),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {},
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            course['title'],
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: _white, // ⬅️ White text
-                            ),
+        onTap: () {},
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title & percent chip
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          course['title'],
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: _white,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            course['faculty'],
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: _white.withOpacity(0.6), // ⬅️ White text
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: chipBackgroundColor, // Use color-specific background
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: color, width: 1), // Solid border
-                      ),
-                      child: Text(
-                        '${percentage.toStringAsFixed(1)}%',
-                        style: TextStyle(
-                          color: color, // Text color matches glow
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        Text(
+                          course['faculty'],
+                          style: TextStyle(fontSize: 13, color: _white.withOpacity(0.6)),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: percentage / 100,
-                    backgroundColor: _white.withOpacity(0.1), // ⬅️ Subtle white track
-                    color: color, // Progress bar color based on percentage
-                    minHeight: 8,
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: chipBackgroundColor,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: color, width: 1),
+                    ),
+                    child: Text(
+                      '${percentage.toStringAsFixed(1)}%',
+                      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // Progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: (percentage / 100).clamp(0.0, 1.0),
+                  backgroundColor: _white.withOpacity(0.1),
+                  color: color,
+                  minHeight: 8,
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildInfoChip(
-                      Icons.check_circle,
-                      '${(course['conducted'] ?? 0) - (course['absent'] ?? 0)}',
-                      const Color(0xFF00FFC0), // Neon Green for Present
+              ),
+
+              const SizedBox(height: 12),
+
+              // Info chips: Present / Absent / Conducted
+              Row(
+                children: [
+                  _buildInfoChip(Icons.check_circle, '$attended', const Color(0xFF00FFC0)),
+                  const SizedBox(width: 8),
+                  _buildInfoChip(Icons.cancel, '$absent', _neonPink),
+                  const SizedBox(width: 8),
+                  _buildInfoChip(Icons.book, '$conducted', const Color.fromARGB(255, 241, 242, 242)),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // New: 75% tracker line
+              Row(
+                children: [
+                  Icon(targetIcon, size: 16, color: targetColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      targetText,
+                      style: TextStyle(color: targetColor, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(width: 8),
-                    _buildInfoChip(
-                      Icons.cancel,
-                      '${course['absent'] ?? 0}',
-                      _neonPink, // Neon Pink for Absent
-                    ),
-                    const SizedBox(width: 8),
-                    _buildInfoChip(
-                      Icons.book,
-                      '${course['conducted'] ?? 0}',
-                      const Color.fromARGB(255, 241, 242, 242), // Neon Blue for Conducted
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildInfoChip(IconData icon, String text, Color color) {
     return Container(

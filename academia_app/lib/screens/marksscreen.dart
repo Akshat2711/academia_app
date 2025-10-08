@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/marks_stats_widget.dart';
 
 // ============================================================================
 // MARKS SCREEN - Test scores and performance
@@ -25,6 +26,9 @@ class _MarksScreenState extends State<MarksScreen> {
   static const Color _neonYellow = Color(0xFFFFCC33);
   static const Color _neonRed = Color(0xFFFF4081);
 
+//used by stats widget to extract course credit
+  Map<String, int> _courseCredits = {};
+
 
   bool _loading = true;
   List<Map<String, dynamic>> _marks = [];
@@ -45,6 +49,23 @@ class _MarksScreenState extends State<MarksScreen> {
           final Map<String, dynamic> data = json.decode(raw);
           // marks may be at top-level or nested under `attendance`
           var marksRoot = data['marks'];
+
+
+          // Extract course credits
+          if (data['timetable'] != null && data['timetable']['courses'] != null) {
+            final timetableCourses = data['timetable']['courses'];
+            if (timetableCourses is List) {
+              for (final course in timetableCourses) {
+                if (course is Map) {
+                  final title = course['course_title'];
+                  final credit = course['credit'];
+                  if (title != null && credit != null) {
+                    _courseCredits[title.toString()] = (credit is int) ? credit : int.tryParse(credit.toString()) ?? 3;
+                  }
+                }
+              }
+            }
+          }
 
           // Debug: print whether marks exist at top-level
           // ignore: avoid_print
@@ -77,29 +98,50 @@ class _MarksScreenState extends State<MarksScreen> {
 
           if (marksRoot != null && marksRoot is Map) {
             final parsed = <Map<String, dynamic>>[];
-            marksRoot.forEach((code, value) {
-              if (value is Map) {
-                final tests = <Map<String, dynamic>>[];
-                final testsRaw = value['tests'];
-                if (testsRaw is List) {
-                  for (final t in testsRaw) {
-                    if (t is Map) {
-                      tests.add({
-                        'name': t['test_name'] ?? '',
-                        'obtained': (t['obtained_marks'] is num) ? (t['obtained_marks'] as num).toDouble() : (t['obtained_marks'] ?? 0),
-                        'max': t['max_marks'] ?? 0,
-                        'percentage': (t['percentage'] is num) ? (t['percentage'] as num).toDouble() : 0.0,
-                      });
-                    }
+            
+            // Build a mapping from course codes to titles from attendance/timetable
+            final Map<String, String> courseTitleMap = {};
+            if (data['attendance'] != null && data['attendance']['attendance'] != null) {
+              final courses = data['attendance']['attendance']['courses'];
+              if (courses is Map) {
+                courses.forEach((key, courseData) {
+                  if (courseData is Map && courseData['course_title'] != null) {
+                    // Extract base code (remove category suffix like 'RegularTheory')
+                    final baseCode = key.toString().replaceAll(RegExp(r'Regular(Theory|Practical)$'), '');
+                    courseTitleMap[baseCode] = courseData['course_title'];
                   }
-                }
-                parsed.add({
-                  'title': value['course_type'] == null ? code : (value['course_title'] ?? code),
-                  'type': value['course_type'] ?? 'Theory',
-                  'tests': tests,
                 });
               }
-            });
+            }
+  
+      marksRoot.forEach((code, value) {
+        if (value is Map) {
+          final tests = <Map<String, dynamic>>[];
+          final testsRaw = value['tests'];
+          if (testsRaw is List) {
+            for (final t in testsRaw) {
+              if (t is Map) {
+                tests.add({
+                  'name': t['test_name'] ?? '',
+                  'obtained': (t['obtained_marks'] is num) ? (t['obtained_marks'] as num).toDouble() : (t['obtained_marks'] ?? 0),
+                  'max': t['max_marks'] ?? 0,
+                  'percentage': (t['percentage'] is num) ? (t['percentage'] as num).toDouble() : 0.0,
+                });
+              }
+            }
+          }
+          
+          // Extract base code from marks key (e.g., "21CSC302JTheory" -> "21CSC302J")
+          final baseCode = code.toString().replaceAll(RegExp(r'(Theory|Practical)$'), '');
+          final courseTitle = courseTitleMap[baseCode] ?? code;
+          
+          parsed.add({
+            'title': courseTitle,
+            'type': value['course_type'] ?? 'Theory',
+            'tests': tests,
+          });
+        }
+      });
             if (parsed.isNotEmpty) {
               setState(() {
                 _marks = parsed;
@@ -114,6 +156,7 @@ class _MarksScreenState extends State<MarksScreen> {
       // Do not populate with defaults; show 'No data found' when empty
       setState(() => _loading = false);
     }
+    
   }
 
   @override
@@ -142,14 +185,18 @@ class _MarksScreenState extends State<MarksScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (_marks.isNotEmpty)
+          if (_marks.isNotEmpty) ...[
+            MarksStatsWidget(
+              marks: _marks,
+              courseCredits: _courseCredits,
+            ),
             ..._marks.map((course) => _buildCourseMarksCard(course))
-          else
+          ] else
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Text(
                 'No data found',
-                style: TextStyle(color: _white.withOpacity(0.6)), // ⬅️ White text
+                style: TextStyle(color: _white.withOpacity(0.6)),
               ),
             ),
           const SizedBox(height: 80),
