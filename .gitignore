@@ -1,3 +1,4 @@
 exeriment_ground
 academia_app/firebase.json
 academia_app/lib/firebase_options.dart
+academia_app/android/app/google-services.json
