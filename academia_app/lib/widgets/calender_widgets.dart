@@ -1,10 +1,30 @@
 // File: calender_widgets.dart
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart'; // Import for launching URLs
+import 'dart:async'; // Import for Future/async
+//for notification services
+import '../services/notification_service.dart';
+
+
+
+
+
 
 // Type definition for the utility function passed from the main screen
 typedef GetEventColor = Color Function(String type);
 // Type definition for the function to save the event
 typedef SaveEventCallback = void Function(Map<String, dynamic> eventData);
+
+// Function to safely launch a URL (placed here for use by EventItemWidget)
+Future<void> _launchUrl(String urlString) async {
+  final Uri uri = Uri.parse(urlString);
+  // Using externalApplication mode to open in the user's default browser
+  if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    // In a production app, you would show a SnackBar or AlertDialog here
+    // ignore: avoid_print
+    print('Could not launch $uri'); 
+  }
+}
 
 // === New Widget for Creating Events (Bottom Sheet) ===
 
@@ -33,10 +53,13 @@ class _CreateEventBottomSheetState extends State<CreateEventBottomSheet> {
   String _description = '';
   String _priority = 'mid'; // Default priority
   String _type = 'custom'; // Default type
+  bool _notificationEnabled = false;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize date from initialData or use current date
     _selectedDate = widget.initialData?['date'] ?? DateTime.now();
     _selectedTime = TimeOfDay.now();
 
@@ -44,19 +67,12 @@ class _CreateEventBottomSheetState extends State<CreateEventBottomSheet> {
       _title = widget.initialData!['title'] ?? '';
       _description = widget.initialData!['desc'] ?? '';
       _priority = widget.initialData!['priority'] ?? 'mid';
+      _notificationEnabled = widget.initialData!['notification'] == 'yes';
       
-      // Safe parsing for TimeOfDay (Assuming standard TimeOfDay.format(context) output)
-      if (widget.initialData!['time'] != null) {
-        final timeString = widget.initialData!['time'] as String;
-        // This simple check is often sufficient for common TimeOfDay formats like "10:00 AM"
-        if (timeString.contains(':')) {
-           // We can't reliably parse AM/PM without a dedicated utility, 
-           // but we can at least set a default time or keep the one that was set.
-           // Since we can't reliably reverse TimeOfDay.format(context) without
-           // locale/context knowledge, we'll keep TimeOfDay.now() for simplicity 
-           // and rely on the user to re-set it if needed.
-        }
-      }
+      // Note: Parsing TimeOfDay from a formatted string without context is tricky.
+      // A robust solution usually involves saving the time as integers (hour, minute)
+      // or using a specific, reversible string format. For this example, we'll
+      // rely on the user to re-select time if the default TimeOfDay.now() is incorrect.
     }
   }
 
@@ -116,9 +132,14 @@ class _CreateEventBottomSheetState extends State<CreateEventBottomSheet> {
     }
   }
 
-  void _submitForm() {
+  void _submitForm()async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+
+      final notificationId = _notificationEnabled 
+          ? '$_title${_selectedDate.millisecondsSinceEpoch}${_selectedTime.hour}${_selectedTime.minute}'.hashCode 
+          : null;
+
       final eventData = {
         'type': _type,
         'title': _title.trim(),
@@ -126,251 +147,318 @@ class _CreateEventBottomSheetState extends State<CreateEventBottomSheet> {
         'priority': _priority,
         'time': _selectedTime.format(context),
         'date': _selectedDate,
+        'notification': _notificationEnabled ? 'yes' : 'no',
+        'notificationId': notificationId, // Store the ID
       };
       widget.onSave(eventData);
+
+    if (_notificationEnabled) {
+      final scheduledDateTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
+      );
+      
+      await NotificationService.scheduleNotification(
+        id: notificationId!,
+        title: _title,
+        body: _description.isNotEmpty ? _description : 'Event reminder',
+        dateTime: scheduledDateTime,
+      );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Notification scheduled!")),
+      );
+    } else if (widget.isEditing && widget.initialData?['notification'] == 'yes') {
+      // Use the STORED notification ID to cancel
+      final storedNotificationId = widget.initialData!['notificationId'];
+      if (storedNotificationId != null) {
+        await NotificationService.cancelNotification(storedNotificationId);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Notification removed!")),
+        );
+      }
+    }
+
       Navigator.pop(context);
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  return Container(
-    padding: const EdgeInsets.all(22),
-    decoration: const BoxDecoration(
-      color: Color.fromARGB(222, 20, 20, 20), // full pitch black background
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    child: Form(
-      key: _formKey,
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Text(
-              widget.isEditing ? 'Edit Custom Event' : 'Create Custom Event',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Divider(color: Colors.white24, thickness: 1),
-            const SizedBox(height: 18),
-
-            // Title Field
-            _buildTextFormField(
-              label: 'Title',
-              initialValue: _title,
-              validator: (value) =>
-                  value!.isEmpty ? 'Title cannot be empty' : null,
-              onSaved: (value) => _title = value!,
-            ),
-            const SizedBox(height: 20),
-
-            // Description Field
-            _buildTextFormField(
-              label: 'Description',
-              maxLines: 3,
-              initialValue: _description,
-              onSaved: (value) => _description = value!,
-            ),
-            const SizedBox(height: 26),
-
-            // Date and Time Pickers
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPickerButton(
-                    context,
-                    icon: Icons.calendar_today,
-                    label: 'Date',
-                    value:
-                        '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                    onPressed: () => _selectDate(context),
-                  ),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: const BoxDecoration(
+        color: Color.fromARGB(222, 20, 20, 20), // full pitch black background
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Text(
+                widget.isEditing ? 'Edit Custom Event' : 'Create Custom Event',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: _buildPickerButton(
-                    context,
-                    icon: Icons.access_time,
-                    label: 'Time',
-                    value: _selectedTime.format(context),
-                    onPressed: () => _selectTime(context),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-
-            // Priority Selector (Circular)
-            const Text(
-              'Priority:',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              const Divider(color: Colors.white24, thickness: 1),
+              const SizedBox(height: 18),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: ['low', 'mid', 'high'].map((priority) {
-                final isSelected = _priority == priority;
-                final color = _getPriorityColor(priority);
+              // Title Field
+              _buildTextFormField(
+                label: 'Title',
+                initialValue: _title,
+                validator: (value) =>
+                    value!.isEmpty ? 'Title cannot be empty' : null,
+                onSaved: (value) => _title = value!,
+              ),
+              const SizedBox(height: 20),
 
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _priority = priority;
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 55,
-                    height: 55,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isSelected
-                          ? color.withOpacity(0.9)
-                          : const Color(0xFF1A1A1A),
-             
+              // Description Field
+              _buildTextFormField(
+                label: 'Description',
+                maxLines: 3,
+                initialValue: _description,
+                onSaved: (value) => _description = value!,
+              ),
+              const SizedBox(height: 26),
+
+              // Date and Time Pickers
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPickerButton(
+                      context,
+                      icon: Icons.calendar_today,
+                      label: 'Date',
+                      value:
+                          '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                      onPressed: () => _selectDate(context),
                     ),
-                    child: Center(
-                      child: Text(
-                        priority.toUpperCase(),
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white70,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _buildPickerButton(
+                      context,
+                      icon: Icons.access_time,
+                      label: 'Time',
+                      value: _selectedTime.format(context),
+                      onPressed: () => _selectTime(context),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+
+              // Priority Selector (Circular)
+              const Text(
+                'Priority:',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: ['low', 'mid', 'high'].map((priority) {
+                  final isSelected = _priority == priority;
+                  final color = _getPriorityColor(priority);
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _priority = priority;
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 55,
+                      height: 55,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected
+                            ? color.withOpacity(0.9)
+                            : const Color(0xFF1A1A1A),
+              
+                      ),
+                      child: Center(
+                        child: Text(
+                          priority.toUpperCase(),
+                          style: TextStyle(
+                            color: isSelected ? Colors.black : Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 36),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 28),
 
-            // Save / Update Button (flat black)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _submitForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 90, 167, 244),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  elevation: 4,
-                  shadowColor: Colors.black54,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                   
+              // Notification Toggle
+              Row(
+                children: [
+                  const Text(
+                    'Notify me:',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                child: Text(
-                  widget.isEditing ? 'Update Event' : 'Save Event',
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
+                  const SizedBox(width: 12),
+                  IconButton(
+                    icon: Icon(
+                      _notificationEnabled ? Icons.notifications_active : Icons.notifications_outlined,
+                      color: _notificationEnabled ? Colors.blue : Colors.white54,
+                      size: 28,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _notificationEnabled = !_notificationEnabled;
+                      });
+                    },
+                  ),
+                  if (_notificationEnabled)
+                    const Text(
+                      'Enabled',
+                      style: TextStyle(color: Colors.blue, fontSize: 12),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 36),
+
+              // Save / Update Button (flat black)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _submitForm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 90, 167, 244),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 4,
+                    shadowColor: Colors.black54,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    
+                    ),
+                  ),
+                  child: Text(
+                    widget.isEditing ? 'Update Event' : 'Save Event',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-
-Widget _buildTextFormField({
-  required String label,
-  int maxLines = 1,
-  String? initialValue,
-  String? Function(String?)? validator,
-  void Function(String?)? onSaved,
-}) {
-  return TextFormField(
-    initialValue: initialValue,
-    style: const TextStyle(color: Colors.white),
-    decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54),
-        fillColor: const Color(0xFF2A2A2A),
-        filled: true,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.blue, width: 2),
-        ),
-      ),
-      maxLines: maxLines,
-      validator: validator,
-      onSaved: onSaved,
-    );
-  }
-
-  Widget _buildPickerButton(
-      BuildContext context, {
-        required IconData icon,
-        required String label,
-        required String value,
-        required VoidCallback onPressed,
-      }) {
-    return InkWell(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2A2A2A),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            Row(
-              children: [
-                Icon(icon, color: Colors.blue, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  value,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Color _getPriorityColor(String priority) {
-    switch (priority) {
-      case 'high':
-        return const Color.fromARGB(255, 242, 150, 144);
-      case 'mid':
-        return const Color.fromARGB(255, 255, 229, 152);
-      case 'low':
-        return const Color.fromARGB(255, 169, 245, 171);
-      default:
-        return Colors.grey;
+
+  Widget _buildTextFormField({
+    required String label,
+    int maxLines = 1,
+    String? initialValue,
+    String? Function(String?)? validator,
+    void Function(String?)? onSaved,
+  }) {
+    return TextFormField(
+      initialValue: initialValue,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.white54),
+          fillColor: const Color(0xFF2A2A2A),
+          filled: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Colors.blue, width: 2),
+          ),
+        ),
+        maxLines: maxLines,
+        validator: validator,
+        onSaved: onSaved,
+      );
     }
-  }
+
+    Widget _buildPickerButton(
+        BuildContext context, {
+          required IconData icon,
+          required String label,
+          required String value,
+          required VoidCallback onPressed,
+        }) {
+      return InkWell(
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2A2A2A),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              Row(
+                children: [
+                  Icon(icon, color: Colors.blue, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    value,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Color _getPriorityColor(String priority) {
+      switch (priority) {
+        case 'high':
+          return const Color.fromARGB(255, 242, 150, 144);
+        case 'mid':
+          return const Color.fromARGB(255, 255, 229, 152);
+        case 'low':
+          return const Color.fromARGB(255, 169, 245, 171);
+        default:
+          return Colors.grey;
+      }
+    }
 }
 
 // === Existing Widgets (DateCellWidget, EventItemWidget, LegendItemWidget) ===
@@ -479,7 +567,9 @@ class EventItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = getEventColor(event['type'] == 'custom' ? 'custom' : event['type']);
-    final hasImage = event['img_link'] != null;
+    final hasImage = event['img_link'] != null && (event['img_link'] as String).isNotEmpty;
+    final linkUrl = event['links'] ?? '';
+    final String? titleText = event['heading'] ?? event['title'];
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -541,20 +631,37 @@ class EventItemWidget extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (event['title'] != null)
-                  Text(
-                    event['title'],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+     
+
+              if (titleText != null)
+                Text(
+                  titleText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+
                 const SizedBox(height: 4),
                 Text(
                   event['desc'],
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
+                const SizedBox(height: 4),
+                // NEW: Make the 'links' text clickable
+                if (linkUrl.isNotEmpty)
+                  InkWell(
+                    onTap: () => _launchUrl(linkUrl),
+                    child: Text(
+                      event['links'],
+                      style: const TextStyle(
+                          color: Color.fromARGB(255, 105, 172, 198),
+                          fontSize: 14,
+                          decoration: TextDecoration.underline, // Visual cue for link
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -600,175 +707,3 @@ class LegendItemWidget extends StatelessWidget {
 }
 
 
-/// A compact card widget to display custom tasks in a list
-
-
-class CustomTaskCard extends StatelessWidget {
-  final Map<String, dynamic> event;
-  final DateTime date;
-  final VoidCallback? onDelete;
-  final VoidCallback? onEdit;
-
-  const CustomTaskCard({
-    Key? key,
-    required this.event,
-    required this.date,
-    this.onDelete,
-    this.onEdit,
-  }) : super(key: key);
-
-  Color _getPriorityColor(String priority) {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return Colors.redAccent;
-      case 'mid':
-        return Colors.amberAccent;
-      case 'low':
-        return Colors.lightGreenAccent;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final priority = (event['priority'] ?? 'mid').toString().toLowerCase();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Priority color bar
-          Container(
-            width: 5,
-            height: 60,
-            decoration: BoxDecoration(
-              color: _getPriorityColor(priority),
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Title and description
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title 
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        event['title'] ?? 'Untitled Task',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  event['desc'] ?? '',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          // Date + Time neatly stacked
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 220, 219, 219),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today, color: Colors.black87, size: 13),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${date.day}/${date.month}/${date.year}',
-                      style: const TextStyle(
-                        color: Color.fromARGB(221, 70, 70, 70),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              if (event['time'] != null) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, color: Colors.white54, size: 13),
-                    const SizedBox(width: 4),
-                    Text(
-                      event['time'],
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 8),
-              // Edit + Delete side by side
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  InkWell(
-                    onTap: onEdit,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 237, 239, 241).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(Icons.edit, color: Color.fromARGB(255, 255, 255, 255), size: 18),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: onDelete,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(Icons.delete, color: Colors.redAccent, size: 18),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}

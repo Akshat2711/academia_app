@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/attendance_predict.dart';
 
 // ============================================================================
 // ATTENDANCE SCREEN - Course-wise attendance details
@@ -94,47 +95,70 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _pitchBlack, // ⬅️ Changed to pitch black
-      appBar: AppBar(
-        title: const Text(
-          'Attendance',
-          style: TextStyle(fontWeight: FontWeight.w600, color: _white), // ⬅️ White text
-        ),
-        backgroundColor: _pitchBlack, // ⬅️ Changed to pitch black
-        foregroundColor: _neonPink, // ⬅️ Neon Pink for icons/buttons
-        elevation: 0,
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: _pitchBlack,
+    appBar: AppBar(
+      title: const Text(
+        'Attendance',
+        style: TextStyle(fontWeight: FontWeight.w600, color: _white),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _neonPink)) // ⬅️ Neon Pink loading indicator
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildOverallCard(),
-                const SizedBox(height: 20),
-                Text(
-                  'Course-wise Attendance',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: _white, // ⬅️ White text
+      backgroundColor: _pitchBlack,
+      foregroundColor: _neonPink,
+      elevation: 0,
+    ),
+    // Add this FloatingActionButton
+    floatingActionButton: _courses.isNotEmpty
+        ? FloatingActionButton.extended(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AttendancePredictor(courses: _courses),
+                ),
+              );
+            },
+            backgroundColor: _neonPink,
+            foregroundColor: _pitchBlack,
+            icon: const Icon(Icons.timeline),
+            label: const Text(
+              'Predict',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          )
+        : null,
+    body: _loading
+        ? const Center(child: CircularProgressIndicator(color: _neonPink))
+        : ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildOverallCard(),
+              const SizedBox(height: 20),
+              Text(
+                'Course-wise Attendance',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: _white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (_courses.isNotEmpty)
+                ..._courses.map((course) => _buildCourseCard(course))
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Text(
+                    'No data found',
+                    style: TextStyle(color: _white.withOpacity(0.6)),
                   ),
                 ),
-                const SizedBox(height: 12),
-                  if (_courses.isNotEmpty)
-                    ..._courses.map((course) => _buildCourseCard(course))
-                  else
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Text('No data found', style: TextStyle(color: _white.withOpacity(0.6))), // ⬅️ White text
-                    ),
-                const SizedBox(height: 80),
-              ],
-            ),
-    );
-  }
+              const SizedBox(height: 80),
+            ],
+          ),
+  );
+}
 
 Widget _buildOverallCard() {
   final present = (_totalConducted - _totalAbsent).toString();

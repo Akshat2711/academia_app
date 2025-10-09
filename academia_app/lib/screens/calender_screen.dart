@@ -6,8 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/calender_widgets.dart'; 
 import 'dart:convert';
 //to import calender data
-import '../utils/calender_data.dart';
-
+import '../services/calender_data.dart';
+//for custom taks
+import '../widgets/custom_task_widget.dart';
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
 
@@ -24,18 +25,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Map<String, Color> _priorityColorMap = {};
   
   // Sample events data (will be merged with loaded data)
-  Map<String, Map<String, dynamic>> eventsData = getEventsData();
+  Map<String, Map<String, dynamic>> eventsData = {};
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    //for firestore
+    loadEvents();
     // Initialize to the start of the current month
     _currentDisplayMonth = DateTime(_today.year, _today.month); 
     _pageController = PageController(initialPage: _getInitialPage());
   }
 
-  // --- Local Storage Functions (Dummy) ---
+//helper func for firestore
+  Future<void> loadEvents() async {
+      final firestoreEvents = await getEventsData();
+      // Carefully merge Firestore events with existing events
+      firestoreEvents.forEach((dateKey, dayData) {
+        if (eventsData.containsKey(dateKey)) {
+          // If we already have events for this date, add new ones
+          List existingEvents = eventsData[dateKey]!['event'] as List;
+          List newEvents = dayData['event'] as List;
+          // Only add events that aren't custom (custom events take precedence)
+          newEvents.where((event) => event['type'] != 'custom').forEach((event) {
+            existingEvents.add(event);
+          });
+        } else {
+          // If no events exist for this date, just add the Firestore events
+          eventsData[dateKey] = dayData;
+        }
+      });
+      setState(() {}); // refresh UI if needed
+    }
+
+  // --- Local Storage Functions  ---
   
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -59,11 +83,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final customEventsJson = prefs.getString('customEvents');
     if (customEventsJson != null) {
       Map<String, dynamic> loadedEvents = json.decode(customEventsJson);
-      Map<String, Map<String, dynamic>> castedEvents = {};
       loadedEvents.forEach((key, value) {
-        castedEvents[key] = (value as Map).cast<String, dynamic>();
+        final castedValue = (value as Map).cast<String, dynamic>();
+        if (eventsData.containsKey(key)) {
+          // Merge events for same date
+          final existingEvents = eventsData[key]!['event'] as List;
+          final customEvents = castedValue['event'] as List;
+          existingEvents.addAll(customEvents);
+        } else {
+          eventsData[key] = castedValue;
+        }
       });
-      eventsData.addAll(castedEvents); // Merge loaded events
     }
 
     setState(() {}); // Update the UI with loaded data
@@ -77,10 +107,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _saveEvents() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Only save the custom event structure to local storage for now
-    await prefs.setString('customEvents', json.encode(eventsData));
-  }
+      final prefs = await SharedPreferences.getInstance();
+      // Extract ONLY custom events to save
+      Map<String, Map<String, dynamic>> customOnlyEvents = {};
+      
+      eventsData.forEach((dateKey, dayData) {
+        final events = dayData['event'] as List?;
+        if (events != null) {
+          final customEvents = events.where((e) => e['type'] == 'custom').toList();
+          if (customEvents.isNotEmpty) {
+            customOnlyEvents[dateKey] = {'event': customEvents};
+          }
+        }
+      });
+      
+      await prefs.setString('customEvents', json.encode(customOnlyEvents));
+    }
   
   void _saveCustomEvent(Map<String, dynamic> eventData) {
     // 1. Format date key
@@ -94,6 +136,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       "desc": eventData['desc'],
       "priority": eventData['priority'],
       "time": eventData['time'],
+      'notification': eventData['notification'],
+      'notificationId':eventData['notificationId'],
     };
 
     setState(() {
@@ -151,6 +195,8 @@ void _openEditEventSheet(DateTime date, int eventIndex, Map<String, dynamic> exi
             "desc": eventData['desc'],
             "priority": eventData['priority'],
             "time": eventData['time'],
+            'notification': eventData['notification'],
+            'notificationId': eventData['notificationId'],
           };
           
           setState(() {
@@ -475,7 +521,7 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
           ),
           // Custom Events List and Legend (Fixed Height, Scrollable List)
           Container(
-            height: 350,
+            height: 300,
             decoration: const BoxDecoration(
               color: Color.fromARGB(255, 10, 10, 10),
               border: Border(top: BorderSide(color: Colors.white24, width: 1)),

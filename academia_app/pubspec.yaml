@@ -35,7 +35,12 @@ dependencies:
   #for local storage
   shared_preferences: ^2.1.0
   #for notifications
-  flutter_local_notifications: ^19.4.2
+  flutter_local_notifications: ^18.0.0
+  timezone: ^0.9.3
+  permission_handler: ^11.0.0 
+
+  intl: ^0.19.0
+
 
   #for firestore->
   # for Firebase initialization
@@ -43,6 +48,10 @@ dependencies:
 
   #  use Firestore (database)
   cloud_firestore: ^5.4.0
+  #for connection check(offline/online)
+  connectivity_plus: ^6.0.2
+  #for launching urls
+  url_launcher: ^6.3.1   
 
 
 

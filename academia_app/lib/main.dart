@@ -7,6 +7,9 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 //for firestore->
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+// Add timezone imports
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -15,18 +18,27 @@ void main() async {
   // Keep splash screen visible until setup is done
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
+  // Initialize timezones BEFORE initializing notifications
+  tz.initializeTimeZones();
+  // Set to India timezone (Kallakurichi, Tamil Nadu)
+  tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
+  
+  // Verify timezone is set correctly
+  print('Timezone set to: ${tz.local.name}');
+  print('Current time in local timezone: ${tz.TZDateTime.now(tz.local)}');
+
   // Initialize notifications and local storage
   await NotificationService.init();
   final prefs = await SharedPreferences.getInstance();
   final String? userData = prefs.getString('userData');
 
-  // Remove splash once setup completes
-  FlutterNativeSplash.remove();
-
   //firestore initialization
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform, // 👈 auto setup
   );
+
+  // Remove splash once setup completes
+  FlutterNativeSplash.remove();
 
   // Run app
   runApp(MyApp(isLoggedIn: userData != null));
