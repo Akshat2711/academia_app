@@ -9,6 +9,7 @@ import 'dart:convert';
 import '../services/calender_data.dart';
 //for custom taks
 import '../widgets/custom_task_widget.dart';
+
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
 
@@ -27,15 +28,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // Sample events data (will be merged with loaded data)
   Map<String, Map<String, dynamic>> eventsData = {};
 
+  // NEW: Variable to store the initial day order fetched from 'userData'
+  int? _initialDayOrder; 
+
+  // NEW: State variable to track loading status
+  bool _isLoadingData = true;
+
   @override
   void initState() {
     super.initState();
-    _loadData();
-    //for firestore
-    loadEvents();
+    // Use Future.wait to track all async loading processes
+    _initializeData();
+    
     // Initialize to the start of the current month
     _currentDisplayMonth = DateTime(_today.year, _today.month); 
     _pageController = PageController(initialPage: _getInitialPage());
+  }
+
+  // NEW: Helper to manage multiple async calls and loading state
+  Future<void> _initializeData() async {
+    // Start with data being loaded
+    setState(() {
+      _isLoadingData = true;
+    });
+
+    await Future.wait([
+      _loadData(), // Loads shared preferences data
+      loadEvents(), // Loads firestore data
+    ]);
+    
+    // Once all data is fetched, set loading to false and refresh UI
+    setState(() {
+      _isLoadingData = false;
+    });
   }
 
 //helper func for firestore
@@ -56,7 +81,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           eventsData[dateKey] = dayData;
         }
       });
-      setState(() {}); // refresh UI if needed
+      // Note: We avoid calling setState here, as it's called once in _initializeData after all data loads.
     }
 
   // --- Local Storage Functions  ---
@@ -96,7 +121,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
       });
     }
 
-    setState(() {}); // Update the UI with loaded data
+    // 3. Load Initial Day Order from 'userData'
+    final dataString = prefs.getString('userData');
+    if (dataString != null && dataString.isNotEmpty) {
+      try {
+        final parsedData = json.decode(dataString);
+        // Safely extract and parse the day_order
+        final order = parsedData['attendance']?['day_order'];
+        if (order != null) {
+            // Try to parse as int if it's a string, or use the int value
+            int? parsedOrder = (order is String) ? int.tryParse(order) : order as int?;
+            
+            // Check if it's a valid day order (1 to 5)
+            if (parsedOrder != null && parsedOrder >= 1 && parsedOrder <= 5) {
+                _initialDayOrder = parsedOrder;
+            } else {
+                // ignore: avoid_print
+                print("Warning: Parsed day_order is invalid (not 1-5). Value: $order");
+            }
+        }
+      } catch (e) {
+        // ignore: avoid_print
+        print("Error decoding userData or finding day_order: $e");
+      }
+    }
+    // Note: We avoid calling setState here, as it's called once in _initializeData after all data loads.
   }
 
   Future<void> _savePriorityColorMap() async {
@@ -248,6 +297,53 @@ void _openEditEventSheet(DateTime date, int eventIndex, Map<String, dynamic> exi
     final key = "${date.day}_${date.month}_${date.year}";
     return eventsData[key]?['event'];
   }
+
+  // NEW: Helper to check if a date is a 'holiday'
+  bool _isHoliday(DateTime date) {
+    final events = _getEventsForDate(date);
+    if (events != null) {
+        return events.any((event) => event is Map && event['type'] == 'holiday');
+    }
+    return false;
+  }
+
+  // UPDATED: Logic to pause day order on holiday and resume on the next working day.
+  String? _getSequentialDayOrder(DateTime date) {
+    final todayStart = DateTime(_today.year, _today.month, _today.day);
+    
+    // 1. Check if the target day is before today or if the initial order is missing.
+    if (date.isBefore(todayStart) || _initialDayOrder == null) {
+        return null;
+    }
+    
+    // 2. If the target day is a holiday, do not display a day order.
+    if (_isHoliday(date)) {
+        return null;
+    }
+
+    // 3. Initialize the running day order with today's loaded order.
+    int currentOrder = _initialDayOrder!;
+
+    // 4. Iterate from the day *after* today up to and including the target date.
+    final daysDifference = date.difference(todayStart).inDays;
+
+    for (int i = 1; i <= daysDifference; i++) {
+        final dayToCheck = todayStart.add(Duration(days: i));
+        
+        // Check if the current day is NOT a holiday.
+        if (!_isHoliday(dayToCheck)) {
+            // Only advance the order if the current date is a working day.
+            // Cycle 1 -> 2 -> 3 -> 4 -> 5 -> 1
+            currentOrder = (currentOrder % 5) + 1; 
+        } 
+        // If it IS a holiday, the 'currentOrder' variable simply retains 
+        // the last calculated order from the previous working day, effectively pausing the sequence.
+    }
+
+    // 5. The resulting 'currentOrder' is the correct sequential day order for the 'date'.
+    return currentOrder.toString();
+  }
+
 
   //HELPER METHOD FOR GET ALL CUSTOM EVENTS
 List<Map<String, dynamic>> _getAllCustomEvents() {
@@ -431,6 +527,9 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
                                date.month == _today.month && 
                                date.day == _today.day;
 
+                // NEW: Calculate the sequential day order
+                final dayOrder = _getSequentialDayOrder(date);
+
                 return GestureDetector(
                   onTap: hasEvents ? () => _showEventDetails(date, events) : null,
                   // Use the external widget here
@@ -440,6 +539,8 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
                     hasEvents: hasEvents,
                     events: events,
                     getEventColor: _getEventColor, // Pass the utility function
+                    // NEW: Pass the calculated day order to the DateCellWidget
+                    dayOrder: dayOrder, 
                   ),
                 );
               },
@@ -463,9 +564,25 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Calendar',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Row( // MODIFIED: Use a Row for the title and loading indicator
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Calendar',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            if (_isLoadingData) ...[ // NEW: Display loading indicator if data is being fetched
+              const SizedBox(width: 8),
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
           IconButton(
@@ -553,6 +670,8 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
                           LegendItemWidget(label: 'Event', color: Colors.blue),
                           LegendItemWidget(label: 'Admin', color: Colors.orange),
                           LegendItemWidget(label: 'Custom', color: Colors.deepPurple),
+                          LegendItemWidget(label: 'day order', color: const Color.fromARGB(255, 255, 255, 255)),
+
                         ],
                       ),
                     ],

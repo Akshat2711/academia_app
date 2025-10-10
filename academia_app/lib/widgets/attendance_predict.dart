@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import '../services/timetable_service.dart'; // Import the service
 
 class AttendancePredictor extends StatefulWidget {
   final List<Map<String, dynamic>> courses;
@@ -20,13 +21,15 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
   static const Color _neonPink = Color(0xFFFF00FF);
   static const Color _white = Colors.white;
 
+  final TimetableService _timetableService = TimetableService();
+  // Using _enrichedCourses to hold combined data from attendance and timetable
+  List<Map<String, dynamic>> _enrichedCourses = []; 
+  
   DateTime? _startDate;
   DateTime? _endDate;
   Map<String, Map<String, dynamic>> _calendarData = {};
-  Map<String, dynamic>? _batchTimetable;
-  String _studentBatch = '1';
-  int _currentDayOrder = 1; // Current day order from storage
   List<Map<String, dynamic>> _predictions = [];
+  List<int> _dayOrdersInRange = [];
   bool _loading = false;
 
   @override
@@ -36,8 +39,76 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
   }
 
   Future<void> _loadData() async {
+    await _timetableService.loadTimetable();
     await _loadCalendarData();
-    await _loadTimetableData();
+    await _loadAndEnrichCourses();
+  }
+
+  Future<void> _loadAndEnrichCourses() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('userData');
+      
+      if (raw == null || raw.isEmpty) return;
+      
+      final Map<String, dynamic> data = json.decode(raw);
+      
+      // Get attendance courses
+      final attendanceCourses = data['attendance']?['attendance']?['courses'] as Map<String, dynamic>?;
+      
+      // Get timetable courses (which have slots)
+      final timetableCoursesRaw = data['timetable']?['courses'] as List<dynamic>?;
+      
+      if (attendanceCourses == null || timetableCoursesRaw == null) return;
+      
+      // Build enriched courses list
+      List<Map<String, dynamic>> enriched = [];
+      
+      attendanceCourses.forEach((key, value) {
+        final courseTitle = value['course_title'] ?? '';
+        final category = value['category'] ?? '';
+        final conducted = value['hours_conducted'] ?? 0;
+        final absent = value['hours_absent'] ?? 0;
+        final percentage = value['attendance_percentage'] ?? 0.0;
+        
+        // Find matching course in timetable by title AND category
+        var timetableCourse = timetableCoursesRaw.firstWhere(
+          (tc) {
+            bool titleMatch = tc['course_title'] == courseTitle;
+            if (!titleMatch) return false;
+            
+            String courseType = tc['course_type']?.toString() ?? '';
+            
+            if (category == 'Theory') {
+              // Match Theory or any Theory-based course (Lab Based Theory, Project Based Theory)
+              return courseType.contains('Theory');
+            } else if (category == 'Practical') {
+              // Match Practical courses
+              return courseType == 'Practical';
+            }
+            
+            return false;
+          },
+          orElse: () => null,
+        );
+        
+        enriched.add({
+          'title': courseTitle,
+          'category': category,
+          'slot': timetableCourse?['slot'] ?? '',
+          'conducted': conducted,
+          'absent': absent,
+          'percentage': percentage,
+        });
+      });
+      
+      setState(() {
+        _enrichedCourses = enriched;
+      });
+      
+    } catch (e) {
+      // Error loading and enriching courses
+    }
   }
 
   Future<void> _loadCalendarData() async {
@@ -57,89 +128,53 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
         });
       }
     } catch (e) {
-      print('Error loading calendar data: $e');
+      // Error loading calendar data
     }
-  }
-
-  Future<void> _loadTimetableData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!prefs.containsKey('userData')) return;
-      
-      final raw = prefs.getString('userData');
-      if (raw == null || raw.isEmpty) return;
-      
-      final Map<String, dynamic> data = json.decode(raw);
-      final studentBatch = data['timetable']?['student_info']?['batch'] ?? '1';
-      
-      final Map<String, dynamic> fullBatchTimetable = _hardcodedBatchTimetable();
-      final batchKey = 'Batch$studentBatch';
-      
-      if (fullBatchTimetable.containsKey(batchKey)) {
-        setState(() {
-          _studentBatch = studentBatch;
-          _batchTimetable = fullBatchTimetable[batchKey];
-        });
-      }
-    } catch (e) {
-      print('Error loading timetable data: $e');
-    }
-  }
-
-  Map<String, dynamic> _hardcodedBatchTimetable() {
-    return {
-      "Batch1": {
-        "schedule": {
-          "Day 1": ["A", "A / X", "F / X", "F", "G", "P6", "P7", "P8", "P9", "P10", "L11", "L12"],
-          "Day 2": ["P11", "P12/X", "P13/X", "P14", "P15", "B", "B", "G", "G", "A", "L21", "L22"],
-          "Day 3": ["C", "C / X", "A / X", "D", "B", "P26", "P27", "P28", "P29", "P30", "L31", "L32"],
-          "Day 4": ["P31", "P32/X", "P33/X", "P34", "P35", "D", "D", "B", "E", "C", "L41", "L42"],
-          "Day 5": ["E", "E / X", "C / X", "F", "D", "P46", "P47", "P48", "P49", "P50", "L51", "L52"]
-        }
-      },
-      "Batch2": {
-        "schedule": {
-          "Day 1": ["P1", "P2/X", "P3/X", "P4", "P5", "A", "A", "F", "F", "G", "L11", "L12"],
-          "Day 2": ["B", "B / X", "G / X", "G", "A", "P16", "P17", "P18", "P19", "P20", "L21", "L22"],
-          "Day 3": ["P21", "P22/X", "P23/X", "P24", "P25", "C", "C", "A", "D", "B", "L31", "L32"],
-          "Day 4": ["D", "D / X", "B / X", "E", "C", "P36", "P37", "P38", "P39", "P40", "L41", "L42"],
-          "Day 5": ["P41", "P42/X", "P43/X", "P44", "P45", "E", "E", "C", "F", "D", "L51", "L52"]
-        }
-      }
-    };
   }
 
   List<int> _getDayOrdersInRange(DateTime start, DateTime end) {
     List<int> dayOrders = [];
-    DateTime current = start;
-    int currentDayOrder = 1; // Start with Day 1
     
-    while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+    DateTime today = DateTime.now();
+    // Normalize to start of day
+    today = DateTime(today.year, today.month, today.day);
+    start = DateTime(start.year, start.month, start.day);
+    end = DateTime(end.year, end.month, end.day);
+    
+    // Start calculating from tomorrow's day order if start date is in the future
+    DateTime current = today;
+    int dayOrderCounter = _timetableService.currentDayOrder;
+    
+    // Calculate day order for start date by counting working days from tomorrow
+    while (current.isBefore(start)) {
+      current = current.add(const Duration(days: 1));
+      
       // Skip weekends
+      if (current.weekday >= 6) continue;
+      
+      // Check if it's a holiday
+      String dateKey = '${current.day}_${current.month}_${current.year}';
+      bool isHoliday = _isHoliday(dateKey);
+      
+      if (!isHoliday) {
+        dayOrderCounter = (dayOrderCounter % 5) + 1;
+      }
+    }
+    
+    // Now collect day orders from start to end
+    current = start;
+    while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
       if (current.weekday >= 6) {
         current = current.add(const Duration(days: 1));
         continue;
       }
       
-      // Check if it's a holiday
       String dateKey = '${current.day}_${current.month}_${current.year}';
-      bool isHoliday = false;
-      
-      if (_calendarData.containsKey(dateKey)) {
-        final events = _calendarData[dateKey]?['event'] as List?;
-        if (events != null) {
-          for (var event in events) {
-            if (event['type'] == 'holiday') {
-              isHoliday = true;
-              break;
-            }
-          }
-        }
-      }
+      bool isHoliday = _isHoliday(dateKey);
       
       if (!isHoliday) {
-        dayOrders.add(currentDayOrder);
-        currentDayOrder = (currentDayOrder % 5) + 1; // Cycle through 1-5
+        dayOrders.add(dayOrderCounter);
+        dayOrderCounter = (dayOrderCounter % 5) + 1;
       }
       
       current = current.add(const Duration(days: 1));
@@ -148,47 +183,87 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
     return dayOrders;
   }
 
-  int _countClassesForCourse(List<int> dayOrders, String courseSlot) {
-    if (_batchTimetable == null) return dayOrders.length;
+  bool _isHoliday(String dateKey) {
+    if (!_calendarData.containsKey(dateKey)) return false;
     
-    int classCount = 0;
-    final schedule = _batchTimetable!['schedule'];
+    final events = _calendarData[dateKey]?['event'] as List?;
+    if (events == null) return false;
     
-    for (int dayOrder in dayOrders) {
-      final dayLabel = 'Day $dayOrder';
-      if (schedule[dayLabel] != null) {
-        final slots = List<String>.from(schedule[dayLabel]);
-        
-        // Check if course slot appears in this day's schedule
-        for (String slot in slots) {
-          if (_slotMatches(slot, courseSlot)) {
-            classCount++;
-            break; // Count once per day even if multiple slots
-          }
-        }
-      }
-    }
-    
-    return classCount;
-  }
-
-  bool _slotMatches(String scheduleSlot, String courseSlot) {
-    // Handle multi-slot ranges like L41-L42
-    if (courseSlot.contains('-')) {
-      final parts = courseSlot.split('-');
-      for (var part in parts) {
-        if (part.trim().isEmpty) continue;
-        if (scheduleSlot.contains(part.trim())) {
-          return true;
-        }
-      }
-    } else {
-      if (scheduleSlot.contains(courseSlot)) {
+    for (var event in events) {
+      if (event['type'] == 'holiday') {
         return true;
       }
     }
     return false;
   }
+
+Map<String, int> _countClassesPerCourse(List<int> dayOrders) {
+  
+  // Create unique keys using course title + category + slot
+  Map<String, int> courseClassCount = {};
+  
+  // Initialize all courses to 0 with unique keys
+  for (var course in _enrichedCourses) {
+    final title = course['title'] ?? '';
+    final category = course['category'] ?? '';
+    final slot = course['slot'] ?? '';
+    if (title.isNotEmpty) {
+      final key = '$title|$category|$slot';
+      courseClassCount[key] = 0;
+    }
+  }
+  
+  // Count classes for each day order
+  for (int dayOrder in dayOrders) {
+    final dayClasses = _timetableService.getClassesForDay(dayOrder);
+    
+    for (var scheduledClass in dayClasses) {
+      final scheduledCourse = scheduledClass['course'] ?? '';
+      final scheduledSlot = scheduledClass['slot'] ?? '';
+      
+      // Match with user's courses by checking if course title is in the scheduled class
+      
+      for (var course in _enrichedCourses) {
+        final title = course['title'] ?? '';
+        final category = course['category'] ?? '';
+        final slot = course['slot'] ?? '';
+        
+        if (title.isEmpty) continue;
+        
+        final key = '$title|$category|$slot';
+        final courseSlotClean = slot.replaceAll(RegExp(r'-+$'), '').trim();
+        
+        // 1. Match by title: scheduledCourse must contain the user's course title
+        final titleMatches = scheduledCourse.contains(title);
+        
+        // 2. Match by slot: check if the slot from timetable matches course slot
+        bool slotMatches = false;
+        if (titleMatches) {
+          // For multi-slot courses like P29-P30, check if scheduled slot matches any part
+          if (courseSlotClean.contains('-')) {
+            final parts = courseSlotClean.split('-');
+            for (var p in parts) {
+              if (p.trim().isNotEmpty && scheduledSlot.contains(p.trim())) {
+                slotMatches = true;
+                break;
+              }
+            }
+          } else {
+            // Single slot match
+            slotMatches = scheduledSlot.contains(courseSlotClean);
+          }
+        }
+
+        if (titleMatches && slotMatches) {
+          courseClassCount[key] = (courseClassCount[key] ?? 0) + 1;
+          break; // Move to the next scheduled class
+        }
+      }
+    }
+  }
+  
+  return courseClassCount;
+}
 
   void _calculatePredictions() {
     if (_startDate == null || _endDate == null) return;
@@ -197,18 +272,27 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
     
     // Get day orders in the date range
     final dayOrders = _getDayOrdersInRange(_startDate!, _endDate!);
+    _dayOrdersInRange = dayOrders;
+    
+    // Count classes per course
+    final courseClassCount = _countClassesPerCourse(dayOrders);
     
     List<Map<String, dynamic>> predictions = [];
     
-    for (var course in widget.courses) {
+    for (var course in _enrichedCourses) {
+      final String title = course['title'] ?? '';
+      final String category = course['category'] ?? '';
+      final String slot = course['slot'] ?? '';
       final int currentConducted = course['conducted'] ?? 0;
       final int currentAbsent = course['absent'] ?? 0;
       final int currentPresent = currentConducted - currentAbsent;
       final double currentPercentage = course['percentage'] ?? 0.0;
-      final String courseSlot = course['slot'] ?? '';
       
-      // Count actual classes for this course in the date range
-      final int additionalClasses = _countClassesForCourse(dayOrders, courseSlot);
+      // Create unique key for this course
+      final key = '$title|$category|$slot';
+      
+      // Get class count for this specific course
+      final int additionalClasses = courseClassCount[key] ?? 0;
       
       // Predict new values (assuming student misses all these classes)
       final int predictedConducted = currentConducted + additionalClasses;
@@ -219,15 +303,21 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
       
       final double percentageDrop = currentPercentage - predictedPercentage;
       
+      // Create display name with category if there are duplicates
+      String displayTitle = title;
+      if (category.isNotEmpty && category.toLowerCase() != 'theory') {
+        displayTitle = '$title ($category)';
+      }
+      
       predictions.add({
-        'title': course['title'],
+        'title': displayTitle,
         'currentPercentage': currentPercentage,
         'predictedPercentage': predictedPercentage,
         'percentageDrop': percentageDrop,
         'additionalClasses': additionalClasses,
         'currentConducted': currentConducted,
         'predictedConducted': predictedConducted,
-        'dayOrders': dayOrders.length,
+        'slot': slot,
       });
     }
     
@@ -267,6 +357,7 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
           _endDate = picked;
         }
         _predictions.clear();
+        _dayOrdersInRange.clear();
       });
     }
   }
@@ -297,10 +388,74 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
             ],
             if (_loading)
               const Center(child: CircularProgressIndicator(color: _neonPink))
-            else if (_predictions.isNotEmpty)
+            else if (_predictions.isNotEmpty) ...[
+              _buildDayOrdersCard(),
+              const SizedBox(height: 20),
               _buildPredictionsList(),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDayOrdersCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _neonPink.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _neonPink.withOpacity(0.3), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.calendar_view_week, color: _neonPink, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Day Orders in Selected Period',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _dayOrdersInRange.map((dayOrder) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _pitchBlack,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _neonPink.withOpacity(0.5), width: 1),
+                ),
+                child: Text(
+                  '$dayOrder',
+                  style: const TextStyle(
+                    color: _neonPink,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${_dayOrdersInRange.length} working day${_dayOrdersInRange.length != 1 ? 's' : ''}',
+            style: TextStyle(
+              fontSize: 12,
+              color: _white.withOpacity(0.6),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -426,6 +581,74 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
     final int additionalClasses = prediction['additionalClasses'];
     final Color dropColor = percentageDrop > 0 ? Colors.redAccent : Colors.greenAccent;
     
+    // GET CURRENT AND PREDICTED VALUES
+    final int currentConducted = prediction['currentConducted'] ?? 0;
+    final int predictedConducted = prediction['predictedConducted'] ?? 0;
+    final double currentPercentage = prediction['currentPercentage'] ?? 0.0;
+    final double predictedPercentage = prediction['predictedPercentage'] ?? 0.0;
+    
+    // CALCULATE CURRENT ATTENDED (present)
+    // NOTE: This is an approximation based on the percentage, as actual absent count is not stored
+    final int currentAbsent = (currentConducted * (100 - currentPercentage) / 100).round();
+    final int currentAttended = currentConducted - currentAbsent;
+    
+    // CALCULATE PREDICTED ATTENDED (after missing all classes in range)
+    final int predictedAbsent = currentAbsent + additionalClasses;
+    final int predictedAttended = currentAttended; // Same, because we're missing all new classes
+    
+    // TARGET CALCULATION FOR PREDICTED STATE
+    String targetText = '';
+    Color targetColor = _neonPink;
+    IconData targetIcon = Icons.info_outline;
+    
+    if (predictedConducted == 0) {
+      targetText = 'No classes predicted';
+      targetColor = Colors.grey;
+      targetIcon = Icons.info_outline;
+    } else {
+      if (predictedPercentage < 75.0) {
+        // Need to attend x more classes to reach 75%
+        // Formula: (Total Conducted * 0.75) - Current Attended = Classes needed to attend
+        // Rearranged: (0.75 * predictedConducted - predictedAttended) / 0.25 (Mistake in original code, using simplified logic now)
+        
+        // Correct calculation for how many more classes must be attended to reach 75%
+        // Let N = classes needed to attend, A = current attended, C = conducted classes
+        // (A + N) / (C + N) >= 0.75
+        // A + N >= 0.75 * C + 0.75 * N
+        // A - 0.75 * C >= -0.25 * N
+        // N >= (0.75 * C - A) / 0.25
+        
+        final double rawNeeded = (0.75 * predictedConducted - predictedAttended) / 0.25;
+        final int need = rawNeeded <= 0 ? 0 : rawNeeded.ceil();
+        
+        targetIcon = Icons.trending_up;
+        targetColor = Colors.redAccent;
+        targetText = need == 0
+            ? 'Almost at 75%'
+            : 'Need $need more class${need > 1 ? 'es' : ''} to reach 75%';
+      } else {
+        // Can miss up to m classes and remain >= 75%
+        // Let M = classes that can be missed, A = current attended, C = conducted classes
+        // A / (C + M) >= 0.75
+        // A >= 0.75 * C + 0.75 * M
+        // A - 0.75 * C >= 0.75 * M
+        // M <= (A - 0.75 * C) / 0.75
+        
+        final double rawMargin = (predictedAttended - 0.75 * predictedConducted) / 0.75;
+        final int margin = rawMargin < 0 ? 0 : rawMargin.floor();
+        
+        if (margin <= 0) {
+          targetIcon = Icons.error_outline;
+          targetColor = Colors.orangeAccent;
+          targetText = 'At 75% threshold — avoid missing more';
+        } else {
+          targetIcon = Icons.check_circle_outline;
+          targetColor = Colors.greenAccent;
+          targetText = 'Can miss $margin more class${margin > 1 ? 'es' : ''} and stay ≥75%';
+        }
+      }
+    }
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -446,12 +669,32 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            '$additionalClasses class${additionalClasses != 1 ? 'es' : ''} in selected period',
-            style: TextStyle(
-              fontSize: 12,
-              color: _white.withOpacity(0.6),
-            ),
+          Row(
+            children: [
+              Text(
+                'Slot: ${prediction['slot']}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _neonPink.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '•',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _white.withOpacity(0.4),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$additionalClasses class${additionalClasses != 1 ? 'es' : ''} will be missed',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _white.withOpacity(0.6),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Row(
@@ -495,6 +738,32 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
                             : 'No drop',
                     style: TextStyle(
                       color: dropColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // ADD TARGET INFO CARD HERE
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: targetColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: targetColor.withOpacity(0.3), width: 1),
+            ),
+            child: Row(
+              children: [
+                Icon(targetIcon, color: targetColor, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    targetText,
+                    style: TextStyle(
+                      color: targetColor,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),

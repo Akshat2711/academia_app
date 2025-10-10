@@ -5,11 +5,6 @@ import 'dart:async'; // Import for Future/async
 //for notification services
 import '../services/notification_service.dart';
 
-
-
-
-
-
 // Type definition for the utility function passed from the main screen
 typedef GetEventColor = Color Function(String type);
 // Type definition for the function to save the event
@@ -470,6 +465,7 @@ class DateCellWidget extends StatelessWidget {
   final bool hasEvents;
   final List<dynamic>? events;
   final GetEventColor getEventColor;
+  final String? dayOrder; 
 
   const DateCellWidget({
     Key? key,
@@ -478,11 +474,12 @@ class DateCellWidget extends StatelessWidget {
     required this.hasEvents,
     required this.events,
     required this.getEventColor,
+    this.dayOrder, 
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    if (!hasEvents && !isToday) {
+    if (!hasEvents && !isToday && dayOrder == null) {
       return Center(
         child: Text(
           '$day',
@@ -509,10 +506,12 @@ class DateCellWidget extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: hasEvents ? mainColor.withOpacity(0.2) : Colors.transparent,
+              color: isToday 
+              ? const Color.fromARGB(255, 120, 119, 119) 
+              : (hasEvents ? mainColor.withOpacity(0.2) : Colors.transparent),
             shape: BoxShape.circle,
             border: Border.all(
-              color: isToday ? Colors.white : (hasEvents ? mainColor : Colors.transparent),
+              color: isToday ? const Color.fromARGB(255, 130, 129, 129) : (hasEvents ? mainColor : Colors.transparent),
               width: isToday ? 2.5 : (hasEvents ? 2 : 0),
             ),
           ),
@@ -520,29 +519,54 @@ class DateCellWidget extends StatelessWidget {
             child: Text(
               '$day',
               style: TextStyle(
-                color: Colors.white,
+                color: isToday?const Color.fromARGB(255, 0, 0, 0):Colors.white,
                 fontSize: 16,
                 fontWeight: (hasEvents || isToday) ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ),
         ),
+        
+        // Display Day Order
+        if (dayOrder != null)
+          Positioned(
+            top: 4, 
+            right: 4,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 255, 255, 255),
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                dayOrder!,
+                style: const TextStyle(
+                  color: Color.fromARGB(255, 0, 0, 0),
+                  fontSize: 10, 
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
         // Multiple event indicators (subscript circles)
         if (hasEvents && eventTypes.length > 1)
           Positioned(
             bottom: 0,
             right: 0,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: eventTypes.skip(1).take(2).map((type) {
+            // Changed the layout to use Wrap for cleaner, dynamic flow up to 3 indicators
+            child: Wrap(
+              spacing: 2, // Horizontal space between dots
+              runSpacing: 2, // Vertical space, if they were to wrap
+              // *** FIX HERE: Increased .take(2) to .take(3) to show up to 3 indicators (4 total events) ***
+              children: eventTypes.skip(1).take(3).map((type) {
                 return Container(
-                  width: 10,
-                  height: 10,
-                  margin: const EdgeInsets.only(left: 2),
+                  width: 8, // Reduced size slightly for more space
+                  height: 8,
                   decoration: BoxDecoration(
                     color: getEventColor(type),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 1),
+                    border: Border.all(color: Colors.black, width: 0.5), // Reduced border width
                   ),
                 );
               }).toList(),
@@ -649,7 +673,7 @@ class EventItemWidget extends StatelessWidget {
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
-                // NEW: Make the 'links' text clickable
+                // Make the 'links' text clickable
                 if (linkUrl.isNotEmpty)
                   InkWell(
                     onTap: () => _launchUrl(linkUrl),
@@ -703,7 +727,4 @@ class LegendItemWidget extends StatelessWidget {
       ],
     );
   }
-  
 }
-
-
