@@ -6,6 +6,11 @@ import '../components/subject_info.dart';
 import '../components/faculty_info.dart';
 import '../screens/login_page.dart';
 import 'calender_screen.dart';
+import '../screens/annoucement_screen.dart';
+import '../screens/imp_links_screen.dart';
+
+//FOR IOS LIKE TRANSITION
+import 'package:flutter/cupertino.dart'; 
 
 
 // ============================================================================
@@ -546,7 +551,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        _buildActionButton(Icons.announcement_outlined, 'Announcement', _primaryColor), // Orange
+        _buildActionButton(Icons.announcement_outlined, 'Announcement', _primaryColor,
+         onTap: () {
+            Navigator.push(
+              context,
+              CupertinoPageRoute(builder: (_) => const AnnouncementScreen()),
+            );
+          },
+        ), // Orange
         const SizedBox(height: 8),
         _buildActionButton(
           Icons.calendar_month,
@@ -555,12 +567,20 @@ class _HomeScreenState extends State<HomeScreen> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const CalendarScreen()),
+              CupertinoPageRoute(builder: (_) => const CalendarScreen()),
             );
           },
         ), // orange
         const SizedBox(height: 8),
-        _buildActionButton(Icons.link_sharp, 'Important Links', _primaryColor), // Orange
+        _buildActionButton(
+          Icons.link_sharp, 'Important Links', _primaryColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              CupertinoPageRoute(builder: (_) => const LinksScreen()),
+            );
+          },
+        ), // Orange
       ],
     );
   }
