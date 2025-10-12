@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/responsive_helper.dart';
+import '../utils/day_order_backup.dart'; // Import the day order manager
 
 class CLoginPage extends StatefulWidget {
   const CLoginPage({super.key});
@@ -42,37 +43,71 @@ class _CLoginPageState extends State<CLoginPage> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
+        // ✅ Handle day order (from API or backup)
+        int? dayOrder;
+        if (data['attendance'] != null && data['attendance']['day_order'] != null) {
+          // Day order present in API response
+          dayOrder = data['attendance']['day_order'] as int;
+          print('✅ Day order from API: $dayOrder');
+          
+          // Save day order with forecast
+          await DayOrderManager.saveDayOrderData(
+            currentDayOrder: dayOrder,
+            currentDate: DateTime.now(),
+          );
+        } else {
+          // Day order missing from API, use backup
+          print('⚠️ Day order missing from API response');
+          dayOrder = await DayOrderManager.getCurrentDayOrder();
+          
+          if (dayOrder != null) {
+            print('✅ Using backup day order: $dayOrder');
+            // Add day order to data for dashboard
+            data['attendance'] = data['attendance'] ?? {};
+            data['attendance']['day_order'] = dayOrder;
+          } else {
+            print('⚠️ No backup day order available');
+          }
+        }
+
+        // Save user data to SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('userData', jsonEncode(data));
         await prefs.setString('userEmail', email);
         await prefs.setString('userPassword', password);
         await prefs.setString('lastRefreshTime', DateTime.now().toIso8601String());
 
+        // Show success message with day order info
         if (mounted) {
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const DashboardScreen()),
           );
         }
       } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Login failed: ${response.body}'),
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: ${response.body}'),
+            content: Text('Error: $e'),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
     } finally {
       if (mounted) {
         setState(() {
@@ -99,7 +134,6 @@ class _CLoginPageState extends State<CLoginPage> {
               SizedBox(height: res.height(4)),
 
               // Welcome Text
-              
               Text(
                 'Welcome to Academia',
                 textAlign: TextAlign.center,
@@ -118,7 +152,8 @@ class _CLoginPageState extends State<CLoginPage> {
                   fontWeight: FontWeight.bold,
                   color: const Color.fromARGB(255, 30, 70, 162),
                   letterSpacing: -0.5,
-                ),),
+                ),
+              ),
               SizedBox(height: res.height(1)),
               Text(
                 'Sign in to continue',

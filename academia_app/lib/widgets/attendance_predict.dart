@@ -111,26 +111,30 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
     }
   }
 
-  Future<void> _loadCalendarData() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final calendarJson = prefs.getString('calendarData');
-      
-      if (calendarJson != null && calendarJson.isNotEmpty) {
-        final decoded = json.decode(calendarJson);
-        setState(() {
-          _calendarData = Map<String, Map<String, dynamic>>.from(
-            decoded.map((key, value) => MapEntry(
-              key.toString(),
-              Map<String, dynamic>.from(value as Map),
-            )),
-          );
-        });
-      }
-    } catch (e) {
-      // Error loading calendar data
+Future<void> _loadCalendarData() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final calendarJson = prefs.getString('calendar_cache'); // ✅ updated key
+    
+    if (calendarJson != null && calendarJson.isNotEmpty) {
+      final decoded = json.decode(calendarJson) as Map<String, dynamic>;
+
+      setState(() {
+        _calendarData = decoded.map((key, value) => MapEntry(
+          key, 
+          Map<String, dynamic>.from(value as Map),
+        ));
+      });
+
+      print('📦 Loaded calendar data from SharedPreferences');
+    } else {
+      print('⚠️ No cached calendar data in SharedPreferences');
     }
+  } catch (e) {
+    print('❌ Error loading calendar data from SharedPreferences: $e');
   }
+}
+
 
   List<int> _getDayOrdersInRange(DateTime start, DateTime end) {
     List<int> dayOrders = [];

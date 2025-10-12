@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CalendarCache {
   static Map<String, Map<String, dynamic>>? lastData;
@@ -9,7 +11,9 @@ class CalendarCache {
 
 /// Fetch calendar events with caching logic
 Future<Map<String, Map<String, dynamic>>> getEventsData() async {
-  // ✅ Return cached data if fresh (within 10 min)
+  final prefs = await SharedPreferences.getInstance();
+
+  // ✅ 1. Return cached data if fresh (in-memory)
   if (CalendarCache.lastData != null &&
       CalendarCache.lastRefresh != null &&
       DateTime.now().difference(CalendarCache.lastRefresh!) <
@@ -18,24 +22,40 @@ Future<Map<String, Map<String, dynamic>>> getEventsData() async {
     return CalendarCache.lastData!;
   }
 
-  print('☁ Fetching calendar data from Firestore...');
+  // ✅ 2. Try loading from SharedPreferences if exists
+  final String? cachedJson = prefs.getString('calendar_cache');
+  final int? cachedTime = prefs.getInt('calendar_cache_time');
 
+  if (cachedJson != null && cachedTime != null) {
+    final savedTime = DateTime.fromMillisecondsSinceEpoch(cachedTime);
+
+    if (DateTime.now().difference(savedTime) < CalendarCache.cacheDuration) {
+      print('📦 Using SharedPreferences calendar cache');
+
+      final decoded = (jsonDecode(cachedJson) as Map<String, dynamic>).map(
+        (key, value) => MapEntry(key, Map<String, dynamic>.from(value)),
+      );
+
+      CalendarCache.lastData = decoded;
+      CalendarCache.lastRefresh = savedTime;
+      return decoded;
+    }
+  }
+
+  print('☁ Fetching calendar data from Firestore...');
   final FirebaseFirestore db = FirebaseFirestore.instance;
   Map<String, Map<String, dynamic>> eventsData = {};
 
   try {
-    // Check connectivity
     final connectivity = await Connectivity().checkConnectivity();
     bool isOffline = connectivity == ConnectivityResult.none;
 
-    // Fetch data from Firestore (server or cache)
     final snapshot = await db.collection('calendar').get(
       GetOptions(
         source: isOffline ? Source.cache : Source.serverAndCache,
       ),
     );
 
-    // Process
     for (var doc in snapshot.docs) {
       eventsData[doc.id] = Map<String, dynamic>.from(doc.data() as Map);
     }
@@ -47,14 +67,17 @@ Future<Map<String, Map<String, dynamic>>> getEventsData() async {
     } else {
       print('✅ Calendar data fetched from ${isOffline ? 'cache' : 'server/cache'}.');
 
-      // ✅ Cache it
+      // ✅ Cache in memory
       CalendarCache.lastData = eventsData;
       CalendarCache.lastRefresh = DateTime.now();
+
+      // ✅ Also store in SharedPreferences
+      await prefs.setString('calendar_cache', jsonEncode(eventsData));
+      await prefs.setInt('calendar_cache_time', DateTime.now().millisecondsSinceEpoch);
     }
   } catch (e) {
     print('❌ Error fetching Firestore data: $e');
 
-    // ✅ Fallback to last cached data if available
     if (CalendarCache.lastData != null) {
       print('⚠ Using previous cached calendar data.');
       return CalendarCache.lastData!;

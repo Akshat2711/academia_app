@@ -12,6 +12,9 @@ import '../screens/imp_links_screen.dart';
 //FOR IOS LIKE TRANSITION
 import 'package:flutter/cupertino.dart'; 
 
+//FOR BACKUP DAYORDER
+import '../utils/day_order_backup.dart';
+
 
 // ============================================================================
 // HOME SCREEN - Student profile and overview
@@ -97,6 +100,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
+        //FOR BACKUP HANDLING/////////////////////////
+
+        // ✅ Handle day order (from API or backup)
+        int? dayOrder;
+        if (data['attendance'] != null && data['attendance']['day_order'] != null) {
+          // Day order present in API response
+          dayOrder = data['attendance']['day_order'] as int;
+          print('✅ Day order from API: $dayOrder');
+          
+          // Save day order with forecast
+          await DayOrderManager.saveDayOrderData(
+            currentDayOrder: dayOrder,
+            currentDate: DateTime.now(),
+          );
+        } else {
+          // Day order missing from API, use backup
+          print('⚠️ Day order missing from API response');
+          dayOrder = await DayOrderManager.getCurrentDayOrder();
+          
+          if (dayOrder != null) {
+            print('✅ Using backup day order: $dayOrder');
+            // Add day order to data for dashboard
+            data['attendance'] = data['attendance'] ?? {};
+            data['attendance']['day_order'] = dayOrder;
+          } else {
+            print('⚠️ No backup day order available');
+          }
+        }
+
+        /////////////////////////////////////
+
         
         // Save updated data
         await prefs.setString('userData', jsonEncode(data));
