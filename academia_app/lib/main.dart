@@ -10,6 +10,9 @@ import 'firebase_options.dart';
 // Add timezone imports
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'services/firebase_notification.dart';
+
+
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -36,6 +39,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform, // 👈 auto setup
   );
+
+  //for firebase notifications
+  await NotificationService_firestore().init();
 
   // Remove splash once setup completes
   FlutterNativeSplash.remove();

@@ -11,7 +11,7 @@ class NotificationService {
   /// Initialize plugin
   static Future<void> init() async {
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('ic_stat_notification');
 
     const DarwinInitializationSettings iOSSettings =
         DarwinInitializationSettings(
@@ -104,7 +104,7 @@ class NotificationService {
       channelDescription: 'General notifications',
       importance: Importance.max,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: 'ic_stat_notification',
       playSound: true,
       enableVibration: true,
     );
@@ -155,7 +155,7 @@ class NotificationService {
       channelDescription: 'Notifications scheduled for a specific time',
       importance: Importance.max,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: 'ic_stat_notification',
       playSound: true,
       enableVibration: true,
       enableLights: true,
