@@ -1,3 +1,4 @@
+
 import 'package:academia_app/screens/login_page.dart';
 import 'package:academia_app/screens/dasboardscreen.dart';
 import 'package:academia_app/services/notification_service.dart';
@@ -11,8 +12,8 @@ import 'firebase_options.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'services/firebase_notification.dart';
-
-
+//helper function to auto save data for graph attendance
+import 'package:academia_app/utils/auto_save_graph_data_onlogin.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -37,11 +38,18 @@ void main() async {
 
   //firestore initialization
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform, // 👈 auto setup
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
   //for firebase notifications
   await NotificationService_firestore().init();
+
+  // ============================================================================
+  // SAVE ATTENDANCE DATA ON APP START
+  // ============================================================================
+  if (userData != null && userData.isNotEmpty) {
+    await saveAttendanceDataOnAppStart(userData);
+  }
 
   // Remove splash once setup completes
   FlutterNativeSplash.remove();
@@ -49,6 +57,8 @@ void main() async {
   // Run app
   runApp(MyApp(isLoggedIn: userData != null));
 }
+
+
 
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;

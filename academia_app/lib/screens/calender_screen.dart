@@ -9,6 +9,10 @@ import 'dart:convert';
 import '../services/calender_data.dart';
 //for custom taks
 import '../widgets/custom_task_widget.dart';
+//to open timtable drawer window
+import '../screens/timetablescreen.dart';
+//for ios like animation
+import 'package:flutter/cupertino.dart'; 
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
@@ -321,10 +325,15 @@ void _openEditEventSheet(DateTime date, int eventIndex, Map<String, dynamic> exi
         return null;
     }
 
-    // 3. Initialize the running day order with today's loaded order.
+    // 3. Handle today's day order separately for initialization
+    if (date.isAtSameMomentAs(todayStart)) {
+      return _initialDayOrder.toString();
+    }
+    
+    // 4. Initialize the running day order with today's loaded order.
     int currentOrder = _initialDayOrder!;
 
-    // 4. Iterate from the day *after* today up to and including the target date.
+    // 5. Iterate from the day *after* today up to and including the target date.
     final daysDifference = date.difference(todayStart).inDays;
 
     for (int i = 1; i <= daysDifference; i++) {
@@ -340,7 +349,7 @@ void _openEditEventSheet(DateTime date, int eventIndex, Map<String, dynamic> exi
         // the last calculated order from the previous working day, effectively pausing the sequence.
     }
 
-    // 5. The resulting 'currentOrder' is the correct sequential day order for the 'date'.
+    // 6. The resulting 'currentOrder' is the correct sequential day order for the 'date'.
     return currentOrder.toString();
   }
 
@@ -429,6 +438,7 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
 
   // --- UI/Building Methods ---
 
+  // ORIGINAL: Shows event details. Used when events exist.
   void _showEventDetails(DateTime date, List<dynamic> events) {
     showModalBottomSheet(
       context: context,
@@ -455,6 +465,54 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              // NEW: Display Day Order at the top if it exists
+              if (_getSequentialDayOrder(date) != null) ...[
+                const SizedBox(height: 8),
+                
+                GestureDetector(
+                  onTap: () {
+                    final dayOrderStr = _getSequentialDayOrder(date); // probably returns String
+                    if (dayOrderStr != null) {
+                      final dayOrder = int.tryParse(dayOrderStr); // safely convert to int
+                      if (dayOrder != null) {
+                        Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (context) => TimetableScreen(view_dayorder: dayOrder),
+                          ),
+                        );
+                      } else {
+                        print('Invalid day order: $dayOrderStr');
+                      }
+                    }
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.reply_outlined, color: const Color.fromARGB(255, 0, 0, 0), size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Day Order: ${_getSequentialDayOrder(date)}',
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+
+
+
+              ],
               const SizedBox(height: 20),
               // Use the external widget here
               ...events.map((event) => EventItemWidget(
@@ -467,6 +525,90 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
       ),
     );
   }
+  
+  // NEW: Shows day order details when there are NO events
+  void _showDayDetails(DateTime date, String dayOrder) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.4,
+        minChildSize: 0.3,
+        maxChildSize: 0.7,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Text(
+                '${date.day} ${_getMonthName(date.month)} ${date.year}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () {
+                  final dayOrderStr = _getSequentialDayOrder(date); // probably returns String
+                  if (dayOrderStr != null) {
+                    final dayOrder = int.tryParse(dayOrderStr); // safely convert to int
+                    if (dayOrder != null) {
+                      Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                          builder: (context) => TimetableScreen(view_dayorder: dayOrder),
+                        ),
+                      );
+                    } else {
+                      print('Invalid day order: $dayOrderStr');
+                    }
+                  }
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.reply_outlined, color: const Color.fromARGB(255, 0, 0, 0), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Day Order: ${_getSequentialDayOrder(date)}',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'No events scheduled for this date.',
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildMonthView(DateTime month) {
     final firstDayOfMonth = DateTime(month.year, month.month, 1);
@@ -529,9 +671,21 @@ List<Map<String, dynamic>> _getAllCustomEvents() {
 
                 // NEW: Calculate the sequential day order
                 final dayOrder = _getSequentialDayOrder(date);
+                // NEW: Check if there's anything to show on tap
+                final canOpenDetails = hasEvents || dayOrder != null; 
 
                 return GestureDetector(
-                  onTap: hasEvents ? () => _showEventDetails(date, events) : null,
+                  // MODIFIED: If there are events, call _showEventDetails. 
+                  // If no events but there IS a day order, call the new _showDayDetails.
+                  onTap: canOpenDetails
+                      ? () {
+                          if (hasEvents) {
+                            _showEventDetails(date, events!);
+                          } else if (dayOrder != null) {
+                            _showDayDetails(date, dayOrder);
+                          }
+                        }
+                      : null,
                   // Use the external widget here
                   child: DateCellWidget(
                     day: dayNumber,

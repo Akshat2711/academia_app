@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/attendance_predict.dart';
 
+//for attendance graph 
+import '../widgets/attendance_trend_widget.dart';
+
+
 // ============================================================================
 // ATTENDANCE SCREEN - Course-wise attendance details
 // ============================================================================
@@ -69,6 +73,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               coursesMap.forEach((key, value) {
                 if (value is Map) {
                   parsed.add({
+                    'unique_id':key,
                     'title': value['course_title'] ?? key,
                     'faculty': (value['faculty_name'] ?? '').toString().split('(').first.trim(),
                     'conducted': value['hours_conducted'] is num ? (value['hours_conducted'] as num).toInt() : 0,
@@ -170,6 +175,7 @@ Widget _buildOverallCard() {
       borderRadius: BorderRadius.circular(20),
       // 💡 Updated border to White
       border: Border.all(color: const Color.fromARGB(255, 255, 112, 226).withOpacity(0.7), width: 1.5), // White border
+      
     ),
     child: Column(
       children: [
@@ -365,9 +371,9 @@ Widget _buildCourseCard(Map<String, dynamic> course) {
               // Info chips: Present / Absent / Conducted
               Row(
                 children: [
-                  _buildInfoChip(Icons.check_circle, '$attended', const Color(0xFF00FFC0)),
+                  _buildInfoChip(Icons.check_circle, '$attended', const Color.fromARGB(255, 243, 136, 255)),
                   const SizedBox(width: 8),
-                  _buildInfoChip(Icons.cancel, '$absent', _neonPink),
+                  _buildInfoChip(Icons.cancel, '$absent', const Color.fromARGB(255, 192, 150, 192)),
                   const SizedBox(width: 8),
                   _buildInfoChip(Icons.book, '$conducted', const Color.fromARGB(255, 241, 242, 242)),
                 ],
@@ -387,6 +393,15 @@ Widget _buildCourseCard(Map<String, dynamic> course) {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+//graph widget trend:
+              AttendanceTrendWidget(
+                courseId: course['unique_id'], // Use unique ID if available
+                courseTitle: course['title'],
+                currentPercentage: percentage,
+                currentConducted: conducted,
+                currentAbsent: absent,
               ),
             ],
           ),

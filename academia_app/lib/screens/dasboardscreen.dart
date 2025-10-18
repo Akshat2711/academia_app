@@ -7,6 +7,9 @@ import 'homescreens.dart';
 import 'marksscreen.dart';
 import 'timetablescreen.dart';
 
+//debug screen
+import '../debug/debug_screen.dart';
+
 // ============================================================================
 // DASHBOARD SCREEN - Main navigation container
 // ============================================================================
@@ -51,6 +54,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         index: _currentIndex,
         children: _screens,
       ),
+////////debug screen///////////////////////////////////////////////////////
+      floatingActionButton: FloatingActionButton(
+      backgroundColor: Colors.red,
+      child: const Icon(Icons.bug_report),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SharedPrefsDebugScreen(),
+          ),
+        );
+      },
+    ),
+/////////////////////////////////////////////////////////////////////////////
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [

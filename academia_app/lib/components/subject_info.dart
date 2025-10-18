@@ -1,4 +1,12 @@
 import 'package:flutter/material.dart';
+import '../screens/course_summary_screen.dart';
+//FOR IOS LIKE TRANSITION
+import 'package:flutter/cupertino.dart'; 
+
+// Define custom colors for the new minimalist dark theme
+const Color accentOrange = Color(0xFFFF9800); // Used for text/accents
+const Color darkBackground = Color(0xFF121212); // Primary pitch black background
+const Color cardBackground = Color(0xFF1E1E1E); // Subtle variant of black for the card
 
 // A reusable course card used by TimetableScreen and other places.
 class SubjectInfo extends StatelessWidget {
@@ -9,41 +17,45 @@ class SubjectInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = (course['title'] ?? '').toString();
-    final code = (course['code'] ?? '').toString();
+    final title = (course['title'] ?? course['course_title'] ?? '').toString();
+    final code = (course['code'] ?? course['course_code'] ?? '').toString();
     final credits = course['credits'] is num
         ? (course['credits'] as num).toString()
-        : (course['credits'] ?? '').toString();
-    final faculty = (course['faculty'] ?? '').toString();
-    final slot = (course['slot'] ?? '').toString();
-    final room = (course['room'] ?? '').toString();
+        : (course['credit'] ?? '').toString();
+    final faculty = (course['faculty'] ?? course['faculty_name'] ?? '').toString();
+    final room = (course['room'] ?? course['room_no'] ?? '').toString();
     final category = (course['category'] ?? '').toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.black, // 🖤 Background changed to black
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange, width: 2), // 🟠 Orange border
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: cardBackground, // Subtle dark grey background
+        borderRadius: BorderRadius.circular(12), // Slightly softer corners
+        // Removed border color and box shadow for a cleaner, flatter look
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap ?? () {},
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            // Navigate to CourseDetailScreen
+            Navigator.push(
+              context,
+              CupertinoPageRoute(
+                builder: (context) => CourseDetailScreen(courseCode: code),
+              ),
+            );
+            // Also call the custom onTap if provided
+            onTap?.call();
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // --- TOP ROW: Title, Code, and Credits ---
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Column(
@@ -52,33 +64,36 @@ class SubjectInfo extends StatelessWidget {
                           Text(
                             title,
                             style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color.fromARGB(255, 255, 255, 255), // 🟠 Orange text
+                              fontSize: 17, // Slightly larger title
+                              fontWeight: FontWeight.w600, // Medium bold
+                              color: Colors.white, // White for primary text
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             code,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange, // 🟠 Orange text
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: accentOrange.withOpacity(0.8), // Muted orange for code
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 16),
+                    // Credits Chip (Right side)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), // Reduced vertical padding
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange, width: 1),
+                        color: accentOrange.withOpacity(0.1), // Very subtle orange background
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '$credits Credits',
                         style: const TextStyle(
-                          color: Color.fromARGB(255, 255, 255, 255), // 🟠 Orange text
+                          color: accentOrange, // Strong orange for accent text
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -86,20 +101,29 @@ class SubjectInfo extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                const Divider(height: 1, color: Colors.orange), // 🟠 Orange divider
-                const SizedBox(height: 12),
-                _buildCourseDetailRow(Icons.person, faculty),
-                const SizedBox(height: 8),
+                
+                const SizedBox(height: 16),
+                // Subtle Divider
+                const Divider(height: 1, color: Color(0xFF333333)),
+                const SizedBox(height: 16),
+
+                // --- DETAIL ROWS: Faculty, Slot, Room, Category ---
+                
+                // Faculty
+                _buildCourseDetailRow(Icons.person_outline, 'Faculty:', faculty),
+                const SizedBox(height: 10),
+
+                // Slot and Room (side-by-side)
                 Row(
                   children: [
-                    Expanded(child: _buildCourseDetailRow(Icons.schedule, slot)),
                     if (room.isNotEmpty)
-                      Expanded(child: _buildCourseDetailRow(Icons.room, room)),
+                      Expanded(child: _buildCourseDetailRow(Icons.room_outlined, 'Room:', room)),
                   ],
                 ),
-                const SizedBox(height: 8),
-                _buildCourseDetailRow(Icons.category, category),
+                const SizedBox(height: 10),
+                
+                // Category
+                _buildCourseDetailRow(Icons.category_outlined, 'Category:', category),
               ],
             ),
           ),
@@ -108,18 +132,33 @@ class SubjectInfo extends StatelessWidget {
     );
   }
 
-  Widget _buildCourseDetailRow(IconData icon, String text) {
+  Widget _buildCourseDetailRow(IconData icon, String label, String value) {
+    // Check if the value is empty to avoid rendering unnecessary rows
+    if (value.isEmpty) return const SizedBox.shrink();
+
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color.fromARGB(255, 255, 255, 255)), // 🟠 Icon color
+        Icon(icon, size: 16, color: accentOrange), // Orange icon
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
+        // Label (White, secondary color)
+        Text(
+            label,
             style: const TextStyle(
               fontSize: 13,
-              color: Colors.orange, // 🟠 Text color
+              color: Colors.white70, 
+              fontWeight: FontWeight.w500,
             ),
+          ),
+        const SizedBox(width: 4),
+        // Value (Orange, accent color)
+        Expanded(
+          child: Text(
+            value.trim(),
+            style: const TextStyle(
+              fontSize: 13,
+              color: accentOrange,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

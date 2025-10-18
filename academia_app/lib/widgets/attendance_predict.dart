@@ -136,57 +136,70 @@ Future<void> _loadCalendarData() async {
 }
 
 
-  List<int> _getDayOrdersInRange(DateTime start, DateTime end) {
-    List<int> dayOrders = [];
-    
-    DateTime today = DateTime.now();
-    // Normalize to start of day
-    today = DateTime(today.year, today.month, today.day);
-    start = DateTime(start.year, start.month, start.day);
-    end = DateTime(end.year, end.month, end.day);
-    
-    // Start calculating from tomorrow's day order if start date is in the future
-    DateTime current = today;
-    int dayOrderCounter = _timetableService.currentDayOrder;
-    
-    // Calculate day order for start date by counting working days from tomorrow
-    while (current.isBefore(start)) {
-      current = current.add(const Duration(days: 1));
-      
-      // Skip weekends
-      if (current.weekday >= 6) continue;
-      
-      // Check if it's a holiday
-      String dateKey = '${current.day}_${current.month}_${current.year}';
-      bool isHoliday = _isHoliday(dateKey);
-      
-      if (!isHoliday) {
-        dayOrderCounter = (dayOrderCounter % 5) + 1;
-      }
+List<int> _getDayOrdersInRange(DateTime start, DateTime end) {
+  List<int> dayOrders = [];
+  
+  DateTime today = DateTime.now();
+  // Normalize to start of day
+  today = DateTime(today.year, today.month, today.day);
+  start = DateTime(start.year, start.month, start.day);
+  end = DateTime(end.year, end.month, end.day);
+  
+  // Start calculating from tomorrow's day order if start date is in the future
+  DateTime current = today;
+  int dayOrderCounter = _timetableService.currentDayOrder;
+  
+  // ✅ If today is weekend or holiday, increment to get next working day's order
+  if (current.weekday >= 6) {
+    dayOrderCounter = (dayOrderCounter % 5) + 1;
+  } else {
+    String todayKey = '${today.day}_${today.month}_${today.year}';
+    bool isTodayHoliday = _isHoliday(todayKey);
+    if (isTodayHoliday) {
+      dayOrderCounter = (dayOrderCounter % 5) + 1;
     }
-    
-    // Now collect day orders from start to end
-    current = start;
-    while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
-      if (current.weekday >= 6) {
-        current = current.add(const Duration(days: 1));
-        continue;
-      }
-      
-      String dateKey = '${current.day}_${current.month}_${current.year}';
-      bool isHoliday = _isHoliday(dateKey);
-      
-      if (!isHoliday) {
-        dayOrders.add(dayOrderCounter);
-        dayOrderCounter = (dayOrderCounter % 5) + 1;
-      }
-      
-      current = current.add(const Duration(days: 1));
-    }
-    
-    return dayOrders;
   }
-
+  
+  // Calculate day order for start date by counting working days
+  while (current.isBefore(start)) {
+    // Skip weekends
+    if (current.weekday >= 6) {
+      current = current.add(const Duration(days: 1));
+      continue;
+    }
+    
+    // Check if it's a holiday
+    String dateKey = '${current.day}_${current.month}_${current.year}';
+    bool isHoliday = _isHoliday(dateKey);
+    
+    if (!isHoliday) {
+      dayOrderCounter = (dayOrderCounter % 5) + 1;
+    }
+    
+    current = current.add(const Duration(days: 1));
+  }
+  
+  // Now collect day orders from start to end
+  current = start;
+  while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+    if (current.weekday >= 6) {
+      current = current.add(const Duration(days: 1));
+      continue;
+    }
+    
+    String dateKey = '${current.day}_${current.month}_${current.year}';
+    bool isHoliday = _isHoliday(dateKey);
+    
+    if (!isHoliday) {
+      dayOrders.add(dayOrderCounter);
+      dayOrderCounter = (dayOrderCounter % 5) + 1;
+    }
+    
+    current = current.add(const Duration(days: 1));
+  }
+  
+  return dayOrders;
+}
   bool _isHoliday(String dateKey) {
     if (!_calendarData.containsKey(dateKey)) return false;
     
@@ -269,68 +282,87 @@ Map<String, int> _countClassesPerCourse(List<int> dayOrders) {
   return courseClassCount;
 }
 
-  void _calculatePredictions() {
-    if (_startDate == null || _endDate == null) return;
+void _calculatePredictions() {
+  if (_startDate == null || _endDate == null) return;
+  
+  setState(() => _loading = true);
+  
+  // Get day orders between today and start date (classes you'll attend)
+  DateTime today = DateTime.now();
+  today = DateTime(today.year, today.month, today.day);
+  DateTime startNormalized = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
+  
+  List<int> dayOrdersBetween = [];
+  if (startNormalized.isAfter(today)) {
+    // Only calculate if start date is in the future
+    DateTime dayBeforeStart = startNormalized.subtract(const Duration(days: 1));
+    dayOrdersBetween = _getDayOrdersInRange(today.add(const Duration(days: 1)), dayBeforeStart);
+  }
+  
+  // Get day orders in the selected date range (classes you'll miss)
+  final dayOrders = _getDayOrdersInRange(_startDate!, _endDate!);
+  _dayOrdersInRange = dayOrders;
+  
+  // Count classes you'll attend (between today and start date)
+  final courseClassCountBetween = _countClassesPerCourse(dayOrdersBetween);
+  
+  // Count classes you'll miss (in the selected range)
+  final courseClassCount = _countClassesPerCourse(dayOrders);
+  
+  List<Map<String, dynamic>> predictions = [];
+  
+  for (var course in _enrichedCourses) {
+    final String title = course['title'] ?? '';
+    final String category = course['category'] ?? '';
+    final String slot = course['slot'] ?? '';
+    final int currentConducted = course['conducted'] ?? 0;
+    final int currentAbsent = course['absent'] ?? 0;
+    final int currentPresent = currentConducted - currentAbsent;
+    final double currentPercentage = course['percentage'] ?? 0.0;
     
-    setState(() => _loading = true);
+    // Create unique key for this course
+    final key = '$title|$category|$slot';
     
-    // Get day orders in the date range
-    final dayOrders = _getDayOrdersInRange(_startDate!, _endDate!);
-    _dayOrdersInRange = dayOrders;
+    // Get class count for classes you'll attend
+    final int classesToAttend = courseClassCountBetween[key] ?? 0;
     
-    // Count classes per course
-    final courseClassCount = _countClassesPerCourse(dayOrders);
+    // Get class count for classes you'll miss
+    final int classesToMiss = courseClassCount[key] ?? 0;
     
-    List<Map<String, dynamic>> predictions = [];
+    // Predict new values
+    final int predictedPresent = currentPresent + classesToAttend;
+    final int predictedConducted = currentConducted + classesToAttend + classesToMiss;
+    final int predictedAbsent = currentAbsent + classesToMiss;
+    final double predictedPercentage = predictedConducted > 0
+        ? (predictedPresent / predictedConducted) * 100
+        : 0.0;
     
-    for (var course in _enrichedCourses) {
-      final String title = course['title'] ?? '';
-      final String category = course['category'] ?? '';
-      final String slot = course['slot'] ?? '';
-      final int currentConducted = course['conducted'] ?? 0;
-      final int currentAbsent = course['absent'] ?? 0;
-      final int currentPresent = currentConducted - currentAbsent;
-      final double currentPercentage = course['percentage'] ?? 0.0;
-      
-      // Create unique key for this course
-      final key = '$title|$category|$slot';
-      
-      // Get class count for this specific course
-      final int additionalClasses = courseClassCount[key] ?? 0;
-      
-      // Predict new values (assuming student misses all these classes)
-      final int predictedConducted = currentConducted + additionalClasses;
-      final int predictedAbsent = currentAbsent + additionalClasses;
-      final double predictedPercentage = predictedConducted > 0
-          ? (currentPresent / predictedConducted) * 100
-          : 0.0;
-      
-      final double percentageDrop = currentPercentage - predictedPercentage;
-      
-      // Create display name with category if there are duplicates
-      String displayTitle = title;
-      if (category.isNotEmpty && category.toLowerCase() != 'theory') {
-        displayTitle = '$title ($category)';
-      }
-      
-      predictions.add({
-        'title': displayTitle,
-        'currentPercentage': currentPercentage,
-        'predictedPercentage': predictedPercentage,
-        'percentageDrop': percentageDrop,
-        'additionalClasses': additionalClasses,
-        'currentConducted': currentConducted,
-        'predictedConducted': predictedConducted,
-        'slot': slot,
-      });
+    final double percentageDrop = currentPercentage - predictedPercentage;
+    
+    // Create display name with category if there are duplicates
+    String displayTitle = title;
+    if (category.isNotEmpty && category.toLowerCase() != 'theory') {
+      displayTitle = '$title ($category)';
     }
     
-    setState(() {
-      _predictions = predictions;
-      _loading = false;
+    predictions.add({
+      'title': displayTitle,
+      'currentPercentage': currentPercentage,
+      'predictedPercentage': predictedPercentage,
+      'percentageDrop': percentageDrop,
+      'additionalClasses': classesToMiss,
+      'currentConducted': currentConducted,
+      'predictedConducted': predictedConducted,
+      'classesToAttend': classesToAttend,
+      'slot': slot,
     });
   }
-
+  
+  setState(() {
+    _predictions = predictions;
+    _loading = false;
+  });
+}
   Future<void> _selectDate(bool isStart) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -582,76 +614,75 @@ Map<String, int> _countClassesPerCourse(List<int> dayOrders) {
 
   Widget _buildPredictionCard(Map<String, dynamic> prediction) {
     final double percentageDrop = prediction['percentageDrop'];
-    final int additionalClasses = prediction['additionalClasses'];
     final Color dropColor = percentageDrop > 0 ? Colors.redAccent : Colors.greenAccent;
     
-    // GET CURRENT AND PREDICTED VALUES
-    final int currentConducted = prediction['currentConducted'] ?? 0;
-    final int predictedConducted = prediction['predictedConducted'] ?? 0;
-    final double currentPercentage = prediction['currentPercentage'] ?? 0.0;
-    final double predictedPercentage = prediction['predictedPercentage'] ?? 0.0;
+// GET CURRENT AND PREDICTED VALUES
+final int currentConducted = prediction['currentConducted'] ?? 0;
+final int predictedConducted = prediction['predictedConducted'] ?? 0;
+final double currentPercentage = prediction['currentPercentage'] ?? 0.0;
+final double predictedPercentage = prediction['predictedPercentage'] ?? 0.0;
+final int classesToAttend = prediction['classesToAttend'] ?? 0;
+final int additionalClasses = prediction['additionalClasses'] ?? 0;
+
+// CALCULATE CURRENT ATTENDED (present)
+final int currentAbsent = (currentConducted * (100 - currentPercentage) / 100).round();
+final int currentAttended = currentConducted - currentAbsent;
+
+// CALCULATE PREDICTED ATTENDED (after attending classes before holiday and missing during holiday)
+final int predictedAttended = currentAttended + classesToAttend;
+final int predictedAbsent = currentAbsent + additionalClasses;
+
+// TARGET CALCULATION FOR PREDICTED STATE
+String targetText = '';
+Color targetColor = _neonPink;
+IconData targetIcon = Icons.info_outline;
+
+if (predictedConducted == 0) {
+  targetText = 'No classes predicted';
+  targetColor = Colors.grey;
+  targetIcon = Icons.info_outline;
+} else {
+  if (predictedPercentage < 75.0) {
+    // Need to attend x more classes to reach 75%
+    // Formula: To reach 75% from predicted state
+    // (predictedAttended + N) / (predictedConducted + N) >= 0.75
+    // predictedAttended + N >= 0.75 * (predictedConducted + N)
+    // predictedAttended + N >= 0.75 * predictedConducted + 0.75 * N
+    // N - 0.75 * N >= 0.75 * predictedConducted - predictedAttended
+    // 0.25 * N >= 0.75 * predictedConducted - predictedAttended
+    // N >= (0.75 * predictedConducted - predictedAttended) / 0.25
     
-    // CALCULATE CURRENT ATTENDED (present)
-    // NOTE: This is an approximation based on the percentage, as actual absent count is not stored
-    final int currentAbsent = (currentConducted * (100 - currentPercentage) / 100).round();
-    final int currentAttended = currentConducted - currentAbsent;
+    final double rawNeeded = (0.75 * predictedConducted - predictedAttended) / 0.25;
+    final int need = rawNeeded <= 0 ? 0 : rawNeeded.ceil();
     
-    // CALCULATE PREDICTED ATTENDED (after missing all classes in range)
-    final int predictedAbsent = currentAbsent + additionalClasses;
-    final int predictedAttended = currentAttended; // Same, because we're missing all new classes
+    targetIcon = Icons.trending_up;
+    targetColor = Colors.redAccent;
+    targetText = need == 0
+        ? 'Almost at 75%'
+        : 'Need $need more class${need > 1 ? 'es' : ''} to reach 75%';
+  } else {
+    // Can miss up to m classes and remain >= 75%
+    // Formula: How many more can be missed from predicted state
+    // (predictedAttended) / (predictedConducted + M) >= 0.75
+    // predictedAttended >= 0.75 * (predictedConducted + M)
+    // predictedAttended >= 0.75 * predictedConducted + 0.75 * M
+    // predictedAttended - 0.75 * predictedConducted >= 0.75 * M
+    // M <= (predictedAttended - 0.75 * predictedConducted) / 0.75
     
-    // TARGET CALCULATION FOR PREDICTED STATE
-    String targetText = '';
-    Color targetColor = _neonPink;
-    IconData targetIcon = Icons.info_outline;
+    final double rawMargin = (predictedAttended - 0.75 * predictedConducted) / 0.75;
+    final int margin = rawMargin < 0 ? 0 : rawMargin.floor();
     
-    if (predictedConducted == 0) {
-      targetText = 'No classes predicted';
-      targetColor = Colors.grey;
-      targetIcon = Icons.info_outline;
+    if (margin <= 0) {
+      targetIcon = Icons.error_outline;
+      targetColor = Colors.orangeAccent;
+      targetText = 'At 75% threshold — avoid missing more';
     } else {
-      if (predictedPercentage < 75.0) {
-        // Need to attend x more classes to reach 75%
-        // Formula: (Total Conducted * 0.75) - Current Attended = Classes needed to attend
-        // Rearranged: (0.75 * predictedConducted - predictedAttended) / 0.25 (Mistake in original code, using simplified logic now)
-        
-        // Correct calculation for how many more classes must be attended to reach 75%
-        // Let N = classes needed to attend, A = current attended, C = conducted classes
-        // (A + N) / (C + N) >= 0.75
-        // A + N >= 0.75 * C + 0.75 * N
-        // A - 0.75 * C >= -0.25 * N
-        // N >= (0.75 * C - A) / 0.25
-        
-        final double rawNeeded = (0.75 * predictedConducted - predictedAttended) / 0.25;
-        final int need = rawNeeded <= 0 ? 0 : rawNeeded.ceil();
-        
-        targetIcon = Icons.trending_up;
-        targetColor = Colors.redAccent;
-        targetText = need == 0
-            ? 'Almost at 75%'
-            : 'Need $need more class${need > 1 ? 'es' : ''} to reach 75%';
-      } else {
-        // Can miss up to m classes and remain >= 75%
-        // Let M = classes that can be missed, A = current attended, C = conducted classes
-        // A / (C + M) >= 0.75
-        // A >= 0.75 * C + 0.75 * M
-        // A - 0.75 * C >= 0.75 * M
-        // M <= (A - 0.75 * C) / 0.75
-        
-        final double rawMargin = (predictedAttended - 0.75 * predictedConducted) / 0.75;
-        final int margin = rawMargin < 0 ? 0 : rawMargin.floor();
-        
-        if (margin <= 0) {
-          targetIcon = Icons.error_outline;
-          targetColor = Colors.orangeAccent;
-          targetText = 'At 75% threshold — avoid missing more';
-        } else {
-          targetIcon = Icons.check_circle_outline;
-          targetColor = Colors.greenAccent;
-          targetText = 'Can miss $margin more class${margin > 1 ? 'es' : ''} and stay ≥75%';
-        }
-      }
+      targetIcon = Icons.check_circle_outline;
+      targetColor = Colors.greenAccent;
+      targetText = 'Can miss $margin more class${margin > 1 ? 'es' : ''} and stay ≥75%';
     }
+  }
+}
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

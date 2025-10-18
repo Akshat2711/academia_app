@@ -1,3 +1,4 @@
+// File: timetable_screen.dart
 import 'package:flutter/material.dart';
 import '../services/timetable_service.dart';
 import '../widgets/day_order_card.dart';
@@ -6,20 +7,27 @@ import '../widgets/day_order_card.dart';
 // TIMETABLE SCREEN - Modern card-based timetable with horizontal scrolling
 // ============================================================================
 class TimetableScreen extends StatefulWidget {
-  const TimetableScreen({super.key});
+  // 1. Define view_dayorder as a final field on the Widget
+  final int? view_dayorder;
+
+  // 2. Accept it in the constructor
+  const TimetableScreen({super.key, this.view_dayorder});
   
   @override
   State<TimetableScreen> createState() => _TimetableScreenState();
 }
 
 class _TimetableScreenState extends State<TimetableScreen> {
+  // 3. Remove the incorrect field assignment here. Access via widget.view_dayorder.
+  
   // --- COLOR PALETTE ---
   static const Color _pitchBlack = Color(0xFF000000); // Pitch Black Background
   static const Color _neonPink = Color(0xFFFF1493);  // Neon Reddish-Pink (Deep Pink)
   static const Color _white = Colors.white;          // White Foreground/Text
 
   bool _loading = true;
-  late PageController _pageController;
+  // Make PageController nullable and initialize it later
+  late PageController _pageController; 
   final TimetableService _timetableService = TimetableService();
 
   @override
@@ -31,9 +39,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
   @override
   void dispose() {
     // Check if _pageController has been initialized before disposing
-    if (mounted && _timetableService.batchTimetable != null) {
-      _pageController.dispose();
-    }
+    // No need to check _timetableService.batchTimetable != null since _pageController is init in _loadTimetable
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -43,9 +50,27 @@ class _TimetableScreenState extends State<TimetableScreen> {
     final success = await _timetableService.loadTimetable();
     
     if (success && _timetableService.batchTimetable != null) {
-      // Initialize page controller to start at current day or first day if invalid
-      final currentDay = _timetableService.currentDayOrder;
-      final initialPage = (currentDay >= 1 && currentDay <= 5) ? currentDay - 1 : 0;
+      // Get the day order passed from the constructor (if any)
+      final int? passedDayOrder = widget.view_dayorder;
+
+      // Determine the day order to display:
+      // 1. Use passedDayOrder if it's valid (1-5).
+      // 2. Fall back to currentDayOrder if it's valid (1-5).
+      // 3. Default to 1 (first day) if neither is valid.
+      
+      final int currentDay = _timetableService.currentDayOrder;
+      
+      int targetDay = 1;
+      if (passedDayOrder != null && passedDayOrder >= 1 && passedDayOrder <= 5) {
+        targetDay = passedDayOrder;
+      } else if (currentDay >= 1 && currentDay <= 5) {
+        targetDay = currentDay;
+      }
+
+      // Calculate initialPage (PageController uses 0-based index)
+      final initialPage = targetDay - 1; 
+
+      // Initialize page controller to start at the calculated page
       _pageController = PageController(initialPage: initialPage);
     }
     
