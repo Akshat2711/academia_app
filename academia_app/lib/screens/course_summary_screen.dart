@@ -77,6 +77,7 @@ class CourseDataService {
     _userData = (userDataString != null) ? json.decode(userDataString) : {};
     _graphAttendance = (graphDataString != null) ? json.decode(graphDataString) : {};
     
+    
     if (_userData.isEmpty || _graphAttendance.isEmpty) {
        debugPrint('WARNING: Course data or graph data not found in SharedPreferences.');
     }
@@ -146,15 +147,13 @@ class CourseDataService {
 
     final singleDataList = _graphAttendance[key];
     if (singleDataList == null || singleDataList.isEmpty) return [];
-    
-    final singleData = singleDataList[0];
-    
-    return [
-      GraphDataPoint(
-        date: singleData['date'].toString().substring(5), // e.g., '10-18'
-        percentage: (singleData['percentage'] as num).toDouble(),
-      )
-    ];
+    return singleDataList.map<GraphDataPoint>((item) {
+      return GraphDataPoint(
+        date: item['date'].toString().substring(5),
+        percentage: (item['percentage'] as num).toDouble(),
+      );
+    }).toList();
+
   }
 }
 
@@ -458,20 +457,7 @@ class CourseAttendanceGraph extends StatelessWidget {
     }
     
     // If only one point exists, display it prominently.
-    if (graphData.length == 1) {
-      final point = graphData.first;
-      return Center(
-        child: Column(
-          children: [
-            Text(
-              '${point.percentage.toStringAsFixed(2)}%',
-              style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: accentColor),
-            ),
-            Text('Attendance as of ${point.date}', style: const TextStyle(color: Colors.white70)),
-          ],
-        ),
-      );
-    }
+
 
     // Graph display for multiple points (retains existing logic but with new colors)
     final minPercent = graphData.map((p) => p.percentage).reduce(min);
@@ -480,7 +466,7 @@ class CourseAttendanceGraph extends StatelessWidget {
     final range = maxPercent - baseLine;
 
     return Container(
-      height: 180,
+      height: 200,
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,

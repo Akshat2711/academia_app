@@ -8,6 +8,11 @@ import '../widgets/attendance_predict.dart';
 import '../widgets/attendance_trend_widget.dart';
 
 
+//FOR IOS LIKE TRANSITION
+import 'package:flutter/cupertino.dart'; 
+
+
+
 // ============================================================================
 // ATTENDANCE SCREEN - Course-wise attendance details
 // ============================================================================
@@ -119,7 +124,7 @@ Widget build(BuildContext context) {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                CupertinoPageRoute(
                   builder: (context) => AttendancePredictor(courses: _courses),
                 ),
               );
@@ -294,7 +299,7 @@ Widget _buildCourseCard(Map<String, dynamic> course) {
   return Container(
     margin: const EdgeInsets.only(bottom: 12),
     decoration: BoxDecoration(
-      color: _pitchBlack,
+      color: Color(0xFF1A1A1A),
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: color.withOpacity(0.5), width: 1),
       boxShadow: [

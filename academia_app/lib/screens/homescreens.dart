@@ -15,6 +15,9 @@ import 'package:flutter/cupertino.dart';
 //FOR BACKUP DAYORDER
 import '../utils/day_order_backup.dart';
 
+//for loading animation
+import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
+
 
 // ============================================================================
 // HOME SCREEN - Student profile and overview
@@ -321,92 +324,88 @@ class _HomeScreenState extends State<HomeScreen> {
   final specialization = studentInfo?['specialization']?.toString() ?? 'No data found';
   final semester = studentInfo?['semester']?.toString() ?? 'No data found';
 
-    return Scaffold(
-      backgroundColor: _backgroundColor, // Pitch black background
-      body: RefreshIndicator(
-        onRefresh: _refreshData,
-        color: _primaryColor, // Orange refresh indicator color
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar.large(
-              floating: true,
-              pinned: true,
-              backgroundColor: const Color.fromARGB(255, 0, 0, 0), // Orange AppBar background
-              foregroundColor: Colors.white, // White text/icon color
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Console', style: TextStyle(fontWeight: FontWeight.w600)),
-                  if (_lastRefreshText.isNotEmpty)
-                    Text(
-                      'Updated $_lastRefreshText',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white70,
-                      ),
+  return Scaffold(
+    backgroundColor: _backgroundColor, // Pitch black background
+    body: LiquidPullToRefresh(
+      onRefresh: _refreshData,         
+      color: _primaryColor,              // Orange liquid color
+      backgroundColor: Colors.black,     // Behind the liquid
+      showChildOpacityTransition: false, // Smooth fade of child
+      springAnimationDurationInMilliseconds: 500,
+      child: CustomScrollView(
+        slivers: [
+          SliverAppBar.large(
+            floating: true,
+            pinned: true,
+            backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+            foregroundColor: Colors.white,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Console', style: TextStyle(fontWeight: FontWeight.w600)),
+                if (_lastRefreshText.isNotEmpty)
+                  Text(
+                    'Updated $_lastRefreshText',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white70,
                     ),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.logout),
-                  color: const Color.fromARGB(255, 255, 158, 67),
-                  onPressed: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.remove('userData');
-                    await prefs.remove('userEmail');
-                    await prefs.remove('userPassword');
-                    await prefs.remove('lastRefreshTime');
-
-                    if (!mounted) return;
-
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CLoginPage()),
-                      (route) => false,
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
+                  ),
               ],
             ),
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _buildProfileCard(displayName, regno, program, specialization, semester),
-                  const SizedBox(height: 16),
-                  const SizedBox(height: 16),
-                  _buildStatsGrid(),
-                  const SizedBox(height: 16),
-                  _buildQuickActions(),
-                  if (_courses.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    Text(
-                      'Your Courses',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white, // White text for section title
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Ensure SubjectInfo uses white/orange/black theme if possible
-                    ..._courses.map((course) => SubjectInfo(course: course)),
-                  ],
-                  // Faculty advisors card
-                  // Ensure FacultyInfo uses white/orange/black theme if possible
-                  FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout),
+                color: const Color.fromARGB(255, 255, 158, 67),
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  // Remove all user stored data in local storage
+                  await prefs.clear();
 
-                  const SizedBox(height: 100),
-                ]),
+                  if (!mounted) return;
+
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CLoginPage()),
+                    (route) => false,
+                  );
+                },
               ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildProfileCard(displayName, regno, program, specialization, semester),
+                const SizedBox(height: 16),
+                _buildStatsGrid(),
+                const SizedBox(height: 16),
+                _buildQuickActions(),
+                if (_courses.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    'Your Courses',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ..._courses.map((course) => SubjectInfo(course: course)),
+                ],
+                FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
+                const SizedBox(height: 100),
+              ]),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
+    ),
+  );
   }
 
 

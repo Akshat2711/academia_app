@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // Custom imports
 import 'attendancescreen.dart';
@@ -8,7 +7,7 @@ import 'marksscreen.dart';
 import 'timetablescreen.dart';
 
 //debug screen
-import '../debug/debug_screen.dart';
+/* import '../debug/debug_screen.dart'; */
 
 // ============================================================================
 // DASHBOARD SCREEN - Main navigation container
@@ -33,19 +32,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _printStoredData();
   }
 
-  // Function to check and print stored data
-  Future<void> _printStoredData() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.containsKey('userData')) {
-      final data = prefs.getString('userData');
-      print("Stored user data: $data");
-    } else {
-      print("No user data found in storage.");
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: _screens,
       ),
 ////////debug screen///////////////////////////////////////////////////////
-      floatingActionButton: FloatingActionButton(
+/*       floatingActionButton: FloatingActionButton(
       backgroundColor: Colors.red,
       child: const Icon(Icons.bug_report),
       onPressed: () {
@@ -66,7 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       },
-    ),
+    ), */
 /////////////////////////////////////////////////////////////////////////////
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
