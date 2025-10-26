@@ -7,11 +7,12 @@ import 'dart:math';
 const String USER_DATA_KEY = 'userData';
 const String GRAPH_DATA_KEY = 'GRAPH_ATTENDANCE';
 
-// Define custom color for consistency
-// Keeping original colors for mandatory parts
-const Color navyBlue = Color(0xFF1A237E); // Used for subtle border/background element (minimized)
-const Color darkGreyCard = Color(0xFF1C1C1E); // A very dark grey for card backgrounds (minimized)
-const Color accentColor = Color(0xFF64B5F6); // A lighter blue accent for indicators/icons - **PRIMARY UI COLOR**
+// --- UPDATED COLOR THEME: VIVID ORANGE (No Green/Blue) ---
+const Color _pitchBlack = Color(0xFF000000);
+const Color _white = Colors.white;
+const Color _vividOrange = Color(0xFFFF9800); // Primary Orange Accent
+const Color _lightOrange = Color(0xFFFFB74D); // Lighter shade for borders/subtle elements
+// -------------------------------------------
 
 // =================================================================
 // 1. DATA MODELS (Remain the same)
@@ -55,7 +56,7 @@ class GraphDataPoint {
 }
 
 // =================================================================
-// 2. ASYNCHRONOUS DATA SERVICE (Remain the same)
+// 2. ASYNCHRONOUS DATA SERVICE (Defensive fixes retained)
 // =================================================================
 
 class CourseDataService {
@@ -91,7 +92,9 @@ class CourseDataService {
   }
 
   CourseAttendanceData? getCourseAttendance(String courseCode) {
-    final attendanceMap = _userData['attendance']['attendance']['courses'] as Map<String, dynamic>?;
+    // FIX: Using null-aware operators (?) for safe navigation
+    final attendanceMap = _userData['attendance']?['attendance']?['courses'] as Map<String, dynamic>?;
+    
     if (attendanceMap == null) return null;
 
     final key = _getCourseKey(courseCode, attendanceMap);
@@ -110,7 +113,8 @@ class CourseDataService {
   }
 
   List<TestMarks> getCourseMarks(String courseCode) {
-    final marksMap = _userData['attendance']['marks'] as Map<String, dynamic>?;
+    // FIX: Using null-aware operators (?)
+    final marksMap = _userData['attendance']?['marks'] as Map<String, dynamic>?;
     if (marksMap == null) return [];
 
     final relatedKeys = marksMap.keys.where((k) => k.startsWith(courseCode)).toList();
@@ -137,7 +141,8 @@ class CourseDataService {
   }
 
   List<GraphDataPoint> getCourseGraphData(String courseCode) {
-    final attendanceMap = _userData['attendance']['attendance']['courses'] as Map<String, dynamic>?;
+    // FIX: Using null-aware operators (?)
+    final attendanceMap = _userData['attendance']?['attendance']?['courses'] as Map<String, dynamic>?;
     if (attendanceMap == null) return [];
     
     final key = _getCourseKey(courseCode, attendanceMap);
@@ -148,8 +153,12 @@ class CourseDataService {
     final singleDataList = _graphAttendance[key];
     if (singleDataList == null || singleDataList.isEmpty) return [];
     return singleDataList.map<GraphDataPoint>((item) {
+      // Format date string to be shorter for graph labels (e.g., "01/15" instead of full date)
+      String dateStr = item['date'].toString();
+      String formattedDate = dateStr.length >= 7 ? dateStr.substring(5) : dateStr;
+      
       return GraphDataPoint(
-        date: item['date'].toString().substring(5),
+        date: formattedDate,
         percentage: (item['percentage'] as num).toDouble(),
       );
     }).toList();
@@ -158,7 +167,7 @@ class CourseDataService {
 }
 
 // =================================================================
-// 3. COURSE DETAIL SCREEN (Flat & Minimalist UI)
+// 3. COURSE DETAIL SCREEN (Orange Theme & Original Bar Graph)
 // =================================================================
 
 class CourseDetailScreen extends StatelessWidget {
@@ -173,13 +182,13 @@ class CourseDetailScreen extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
-            backgroundColor: Colors.black, // Pitch black background
+            backgroundColor: _pitchBlack, // Pitch black background
             appBar: AppBar(
-              backgroundColor: Colors.black, // Black app bar
-              title: const Text('Loading Data...', style: TextStyle(color: Colors.white)),
-              iconTheme: const IconThemeData(color: Colors.white), // White back icon
+              backgroundColor: _pitchBlack, // Black app bar
+              title: const Text('Loading Data...', style: TextStyle(color: _white)),
+              iconTheme: const IconThemeData(color: _white), // White back icon
             ),
-            body: const Center(child: CircularProgressIndicator(color: accentColor)),
+            body: const Center(child: CircularProgressIndicator(color: _vividOrange)),
           );
         }
 
@@ -190,11 +199,11 @@ class CourseDetailScreen extends StatelessWidget {
 
         if (attendanceData == null) {
           return Scaffold(
-            backgroundColor: Colors.black,
+            backgroundColor: _pitchBlack,
             appBar: AppBar(
-              backgroundColor: Colors.black,
-              title: const Text('Course Details', style: TextStyle(color: Colors.white)),
-              iconTheme: const IconThemeData(color: Colors.white),
+              backgroundColor: _pitchBlack,
+              title: const Text('Course Details', style: TextStyle(color: _white)),
+              iconTheme: const IconThemeData(color: _white),
             ),
             body: Center(
               child: Text(
@@ -206,11 +215,11 @@ class CourseDetailScreen extends StatelessWidget {
         }
 
         return Scaffold(
-          backgroundColor: Colors.black, // Pitch black background
+          backgroundColor: _pitchBlack, // Pitch black background
           appBar: AppBar(
-            backgroundColor: Colors.black, // Black app bar
-            title: Text("Course Overview", style: const TextStyle(color: Colors.white)),
-            iconTheme: const IconThemeData(color: Colors.white), // White back icon
+            backgroundColor: _pitchBlack, // Black app bar
+            title: const Text("Course Overview", style: TextStyle(color: _white)),
+            iconTheme: const IconThemeData(color: _white), // White back icon
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -219,17 +228,17 @@ class CourseDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   attendanceData.courseTitle,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _white),
                 ),
                 Text(
-                  'Course Code: ${courseCode}',
-                  style: TextStyle(fontSize: 16, color: accentColor.withOpacity(0.8)),
+                  'Course Code: $courseCode',
+                  style: TextStyle(fontSize: 16, color: _vividOrange.withOpacity(0.8)),
                 ),
                 const SizedBox(height: 20),
 
                 _buildInfoCard(
-                  title: 'Faculty',
-                  icon: Icons.person_outline, 
+                  title: 'Faculty & Type',
+                  icon: Icons.info_outline, 
                   children: [
                     _buildDetailRow(
                       label: 'Faculty Name',
@@ -268,13 +277,13 @@ class CourseDetailScreen extends StatelessWidget {
                   title: 'Attendance Trend',
                   icon: Icons.trending_up, 
                   children: [
-                    CourseAttendanceGraph(graphData: graphData),
+                    CourseAttendanceGraph(graphData: graphData), // Reverting to Bar Chart
                     if (graphData.length < 5)
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
                           'Note: Only ${graphData.length} historical data point(s) found.',
-                          style: TextStyle(color: accentColor.withOpacity(0.6), fontStyle: FontStyle.italic, fontSize: 12),
+                          style: TextStyle(color: _vividOrange.withOpacity(0.6), fontStyle: FontStyle.italic, fontSize: 12),
                         ),
                       ),
                   ],
@@ -300,7 +309,7 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
   
-  // --- UI Helper Methods (Flat & Minimalist) ---
+  // --- UI Helper Methods (Orange/Black/White) ---
   
   Widget _buildInfoCard({
     required String title,
@@ -309,24 +318,24 @@ class CourseDetailScreen extends StatelessWidget {
   }) {
     return Container( 
       margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(0.0), // Reduced padding for a flat look
+      padding: const EdgeInsets.all(0.0), 
       decoration: const BoxDecoration(
-        color: Colors.black, // Truly black background
+        color: _pitchBlack, 
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: accentColor, size: 22), 
+              Icon(icon, color: _vividOrange, size: 22), 
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: _white),
               ),
             ],
           ),
-          const Divider(color: Color(0xFF2C2C2E), height: 30, thickness: 0.8), // Very dark grey, subtle divider
+          const Divider(color: Color(0xFF333333), height: 30, thickness: 0.8), // Dark grey divider
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0.0),
             child: Column(children: children),
@@ -354,7 +363,7 @@ class CourseDetailScreen extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: isAccent ? accentColor : Colors.white, // Use accent color for main percentage
+              color: isAccent ? _vividOrange : _white, // Use vividOrange for main percentage
             ),
           ),
         ],
@@ -363,15 +372,13 @@ class CourseDetailScreen extends StatelessWidget {
   }
 
   Widget _buildAttendanceIndicator(double percentage) {
-    Color color = accentColor; // Default to accentColor for minimalist look
+    Color color = _vividOrange; 
 
-    // Optional: Use shades of accentColor for contrast/severity indication
-    if (percentage >= 90) {
-      color = accentColor; // Primary
-    } else if (percentage >= 80) {
-      color = accentColor.withOpacity(0.7); // Slightly muted
+    // Set color based on threshold for clear visual feedback (using only Orange/Red)
+    if (percentage >= 75) {
+      color = _vividOrange; // Use Orange for non-critical/safe zone
     } else {
-      color = accentColor.withOpacity(0.5); // Faded for low
+      color = Colors.redAccent; // Use Red for critical zone (<75%)
     }
 
     return Center(
@@ -381,12 +388,12 @@ class CourseDetailScreen extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             SizedBox(
-              width: 120, // Larger indicator
+              width: 120, 
               height: 120,
               child: CircularProgressIndicator(
                 value: percentage / 100,
                 strokeWidth: 10, 
-                backgroundColor: const Color(0xFF2C2C2E), // Subtle dark grey background
+                backgroundColor: const Color(0xFF2C2C2E), // Dark circle background
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),
             ),
@@ -401,15 +408,13 @@ class CourseDetailScreen extends StatelessWidget {
   }
 
   Widget _buildMarkEntry(TestMarks marks) {
-    // Only use accentColor and its shades/white for minimalist design
-    Color markColor = accentColor; 
+    Color markColor = _vividOrange; 
     
-    if (marks.percentage > 80) {
-      markColor = accentColor; // Strong performance
-    } else if (marks.percentage > 60) {
-      markColor = accentColor.withOpacity(0.7); // Moderate
+    // Set color based on performance (using only Orange/Red)
+    if (marks.percentage > 70) {
+      markColor = _vividOrange; // Strong/Good performance
     } else {
-      markColor = accentColor.withOpacity(0.5); // Low
+      markColor = Colors.redAccent; // Low performance
     }
 
 
@@ -424,7 +429,7 @@ class CourseDetailScreen extends StatelessWidget {
               Flexible(
                 child: Text(
                   marks.testName, 
-                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16, color: Colors.white),
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16, color: _white),
                 ),
               ),
               Text(
@@ -444,7 +449,7 @@ class CourseDetailScreen extends StatelessWidget {
   }
 }
 
-// --- Graph Widget (Flat & Minimalist) ---
+// --- Bar Graph Widget (The Original Style, Re-colored) ---
 class CourseAttendanceGraph extends StatelessWidget {
   final List<GraphDataPoint> graphData;
 
@@ -456,10 +461,7 @@ class CourseAttendanceGraph extends StatelessWidget {
       return const Center(child: Text('No attendance data available for graphing.', style: TextStyle(color: Colors.white70)));
     }
     
-    // If only one point exists, display it prominently.
-
-
-    // Graph display for multiple points (retains existing logic but with new colors)
+    // Graph display for multiple points
     final minPercent = graphData.map((p) => p.percentage).reduce(min);
     final maxPercent = graphData.map((p) => p.percentage).reduce(max);
     final baseLine = max(70.0, minPercent - 5.0);
@@ -477,20 +479,26 @@ class CourseAttendanceGraph extends StatelessWidget {
             normalizedHeight = ((point.percentage - baseLine) / range).clamp(0.0, 1.0);
           }
           final barHeight = normalizedHeight * 120 + 20;
+          
+          Color barColor = _vividOrange.withOpacity(0.8);
+          // Apply color based on threshold using only Orange/Red
+          if (point.percentage < 75) {
+             barColor = Colors.redAccent.withOpacity(0.8);
+          }
 
           return Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
                 '${point.percentage.toStringAsFixed(1)}%', 
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accentColor)
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _vividOrange)
               ),
               const SizedBox(height: 4),
               Container(
                 width: 25,
                 height: barHeight,
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.8), // Accent color bars
+                  color: barColor, // Orange or Red
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
                 ),
               ),

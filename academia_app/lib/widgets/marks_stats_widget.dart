@@ -27,7 +27,7 @@ class MarksStatsWidget extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         // 👇 NEW: Solid Neon Green Background
-        color: _neonGreen, 
+        color: const Color.fromARGB(255, 75, 162, 59), 
         borderRadius: BorderRadius.circular(20),
         // Shadows REMOVED
       ),

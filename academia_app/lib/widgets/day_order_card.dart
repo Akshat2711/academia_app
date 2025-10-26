@@ -1,11 +1,8 @@
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// A self-contained DayOrderCard widget. It no longer depends on private
-// symbols from other files; instead it accepts the list of classes for the
-// given day via the constructor.
-
-class DayOrderCard extends StatelessWidget {
+class DayOrderCard extends StatefulWidget {
   const DayOrderCard({
     super.key,
     required this.day,
@@ -15,14 +12,72 @@ class DayOrderCard extends StatelessWidget {
 
   final int day;
   final bool isCurrentDay;
-  // Each class map should contain: 'time', 'course', 'classroom', 'slot'
   final List<Map<String, String>> classes;
 
-  // Color palette (kept local to this widget)
+  @override
+  State<DayOrderCard> createState() => _DayOrderCardState();
+}
+
+class _DayOrderCardState extends State<DayOrderCard> {
   static const Color _pitchBlack = Color(0xFF000000);
   static const Color _neonPink = Color(0xFFFF1493);
   static const Color _white = Colors.white;
   static const Color _cardBackground = Color(0xFF1A1A1A);
+
+  Map<String, Map<String, dynamic>> _calendarData = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCalendarData();
+  }
+
+  Future<void> _loadCalendarData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final calendarJson = prefs.getString('calendar_cache');
+
+      if (calendarJson != null && calendarJson.isNotEmpty) {
+        final decoded = json.decode(calendarJson) as Map<String, dynamic>;
+
+        setState(() {
+          _calendarData = decoded.map((key, value) => MapEntry(
+                key,
+                Map<String, dynamic>.from(value as Map),
+              ));
+        });
+
+        print('📦 Loaded calendar data from SharedPreferences');
+
+        // Check if today is holiday
+        final today = DateTime.now();
+        final todayKey = "${today.day}_${today.month}_${today.year}";
+        if (_isHoliday(todayKey)) {
+          print('🎉 Today is a HOLIDAY ($todayKey)!');
+        } else {
+          print('📅 Today is a regular working day ($todayKey).');
+        }
+      } else {
+        print('⚠️ No cached calendar data in SharedPreferences');
+      }
+    } catch (e) {
+      print('❌ Error loading calendar data from SharedPreferences: $e');
+    }
+  }
+
+  bool _isHoliday(String dateKey) {
+    if (!_calendarData.containsKey(dateKey)) return false;
+
+    final events = _calendarData[dateKey]?['event'] as List?;
+    if (events == null) return false;
+
+    for (var event in events) {
+      if (event is Map && event['type'] == 'holiday') {
+        return true;
+      }
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,12 +85,12 @@ class DayOrderCard extends StatelessWidget {
   }
 
   Widget _buildDayCard() {
-    final localClasses = classes;
+    final localClasses = widget.classes;
+    final isCurrentDay = widget.isCurrentDay;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        // Neon Pink Glow/Highlight for current day
         gradient: isCurrentDay
             ? LinearGradient(
                 colors: [_neonPink.withOpacity(0.8), _neonPink.withOpacity(0.6)],
@@ -43,10 +98,11 @@ class DayOrderCard extends StatelessWidget {
                 end: Alignment.bottomRight,
               )
             : null,
-        color: isCurrentDay ? null : _cardBackground, // Dark Card background
+        color: isCurrentDay ? null : _cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isCurrentDay ? _neonPink.withOpacity(0.9) : _white.withOpacity(0.1),
+          color:
+              isCurrentDay ? _neonPink.withOpacity(0.9) : _white.withOpacity(0.1),
           width: 1.5,
         ),
         boxShadow: [
@@ -71,8 +127,8 @@ class DayOrderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Day $day',
-                      style: TextStyle(
+                      'Day ${widget.day}',
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: _white,
@@ -84,14 +140,18 @@ class DayOrderCard extends StatelessWidget {
                         Icon(
                           Icons.class_,
                           size: 16,
-                          color: isCurrentDay ? _white.withOpacity(0.8) : _neonPink.withOpacity(0.8),
+                          color: isCurrentDay
+                              ? _white.withOpacity(0.8)
+                              : _neonPink.withOpacity(0.8),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           '${localClasses.length} ${localClasses.length == 1 ? 'Class' : 'Classes'}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: isCurrentDay ? _white.withOpacity(0.8) : _white.withOpacity(0.7),
+                            color: isCurrentDay
+                                ? _white.withOpacity(0.8)
+                                : _white.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -100,7 +160,8 @@ class DayOrderCard extends StatelessWidget {
                 ),
                 if (isCurrentDay)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: _white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -161,10 +222,14 @@ class DayOrderCard extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isCurrentDay ? _pitchBlack.withOpacity(0.3) : _pitchBlack,
+                      color: isCurrentDay
+                          ? _pitchBlack.withOpacity(0.3)
+                          : _pitchBlack,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isCurrentDay ? _white.withOpacity(0.3) : _neonPink.withOpacity(0.3),
+                        color: isCurrentDay
+                            ? _white.withOpacity(0.3)
+                            : _neonPink.withOpacity(0.3),
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -180,14 +245,15 @@ class DayOrderCard extends StatelessWidget {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 color: _neonPink.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 classInfo['slot'] ?? '',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: _neonPink,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -196,14 +262,15 @@ class DayOrderCard extends StatelessWidget {
                             ),
                             const Spacer(),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 color: _white.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.access_time,
                                     size: 14,
                                     color: _white,

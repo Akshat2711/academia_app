@@ -84,7 +84,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             NavigationDestination(
               icon: Icon(Icons.calendar_today_outlined, color: Colors.white),
-              selectedIcon: Icon(Icons.calendar_today, color: Color.fromARGB(255, 228, 159, 255)),
+              selectedIcon: Icon(Icons.calendar_today, color: Color.fromARGB(255, 97, 165, 221)),
               label: 'Attendance',
             ),
             NavigationDestination(

@@ -17,9 +17,15 @@ class AttendancePredictor extends StatefulWidget {
 }
 
 class _AttendancePredictorState extends State<AttendancePredictor> {
+  // --- UPDATED COLOR THEME: NAVY BLUE ---
+  static const Color _navyBlue = Color(0xFF2C5F9E);
+  static const Color _lightNavy = Color(0xFF4A7DC4);
+  static const Color _skyBlue = Color(0xFF64B5F6);
+  static const Color _deepBlue = Color(0xFF1565C0);
+  static const Color _paleBlue = Color(0xFF90CAF9);
   static const Color _pitchBlack = Color(0xFF000000);
-  static const Color _neonPink = Color(0xFFFF00FF);
   static const Color _white = Colors.white;
+  // --------------------------------------
 
   final TimetableService _timetableService = TimetableService();
   // Using _enrichedCourses to hold combined data from attendance and timetable
@@ -373,7 +379,7 @@ void _calculatePredictions() {
         return Theme(
           data: ThemeData.dark().copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: _neonPink,
+              primary: _navyBlue, // Changed to navyBlue
               surface: _pitchBlack,
             ),
           ),
@@ -408,7 +414,7 @@ void _calculatePredictions() {
           style: TextStyle(fontWeight: FontWeight.w600, color: _white),
         ),
         backgroundColor: _pitchBlack,
-        foregroundColor: _neonPink,
+        foregroundColor: _lightNavy, // Changed to lightNavy
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -423,7 +429,7 @@ void _calculatePredictions() {
               const SizedBox(height: 20),
             ],
             if (_loading)
-              const Center(child: CircularProgressIndicator(color: _neonPink))
+              const Center(child: CircularProgressIndicator(color: _lightNavy)) // Changed color
             else if (_predictions.isNotEmpty) ...[
               _buildDayOrdersCard(),
               const SizedBox(height: 20),
@@ -439,16 +445,16 @@ void _calculatePredictions() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _neonPink.withOpacity(0.1),
+        color: _lightNavy.withOpacity(0.1), // Changed color
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _neonPink.withOpacity(0.3), width: 1),
+        border: Border.all(color: _lightNavy.withOpacity(0.3), width: 1), // Changed color
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.calendar_view_week, color: _neonPink, size: 20),
+              Icon(Icons.calendar_view_week, color: _lightNavy, size: 20), // Changed color
               const SizedBox(width: 8),
               const Text(
                 'Day Orders in Selected Period',
@@ -470,12 +476,12 @@ void _calculatePredictions() {
                 decoration: BoxDecoration(
                   color: _pitchBlack,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _neonPink.withOpacity(0.5), width: 1),
+                  border: Border.all(color: _lightNavy.withOpacity(0.5), width: 1), // Changed color
                 ),
                 child: Text(
                   '$dayOrder',
                   style: const TextStyle(
-                    color: _neonPink,
+                    color: _skyBlue, // Changed to skyBlue for contrast
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -502,9 +508,9 @@ void _calculatePredictions() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _neonPink.withOpacity(0.1),
+        color: _lightNavy.withOpacity(0.1), // Changed color
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _neonPink.withOpacity(0.3), width: 1),
+        border: Border.all(color: _lightNavy.withOpacity(0.3), width: 1), // Changed color
       ),
       child: Column(
         children: [
@@ -540,7 +546,7 @@ void _calculatePredictions() {
         decoration: BoxDecoration(
           color: _pitchBlack,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _neonPink.withOpacity(0.5), width: 1),
+          border: Border.all(color: _lightNavy.withOpacity(0.5), width: 1), // Changed color
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -566,7 +572,7 @@ void _calculatePredictions() {
                 ),
               ],
             ),
-            Icon(Icons.calendar_today, color: _neonPink, size: 20),
+            Icon(Icons.calendar_today, color: _lightNavy, size: 20), // Changed color
           ],
         ),
       ),
@@ -577,7 +583,7 @@ void _calculatePredictions() {
     return ElevatedButton(
       onPressed: _calculatePredictions,
       style: ElevatedButton.styleFrom(
-        backgroundColor: _neonPink,
+        backgroundColor: _navyBlue, // Changed to navyBlue
         foregroundColor: _pitchBlack,
         padding: const EdgeInsets.symmetric(vertical: 16),
         shape: RoundedRectangleBorder(
@@ -614,7 +620,8 @@ void _calculatePredictions() {
 
   Widget _buildPredictionCard(Map<String, dynamic> prediction) {
     final double percentageDrop = prediction['percentageDrop'];
-    final Color dropColor = percentageDrop > 0 ? Colors.redAccent : Colors.greenAccent;
+    // Changed drop colors to blue shades
+    final Color dropColor = percentageDrop > 0 ? Colors.redAccent : _paleBlue; 
     
 // GET CURRENT AND PREDICTED VALUES
 final int currentConducted = prediction['currentConducted'] ?? 0;
@@ -634,7 +641,7 @@ final int predictedAbsent = currentAbsent + additionalClasses;
 
 // TARGET CALCULATION FOR PREDICTED STATE
 String targetText = '';
-Color targetColor = _neonPink;
+Color targetColor = _lightNavy; // Changed to lightNavy
 IconData targetIcon = Icons.info_outline;
 
 if (predictedConducted == 0) {
@@ -656,7 +663,7 @@ if (predictedConducted == 0) {
     final int need = rawNeeded <= 0 ? 0 : rawNeeded.ceil();
     
     targetIcon = Icons.trending_up;
-    targetColor = Colors.redAccent;
+    targetColor = Colors.redAccent; // Keep red for 'need more'
     targetText = need == 0
         ? 'Almost at 75%'
         : 'Need $need more class${need > 1 ? 'es' : ''} to reach 75%';
@@ -678,7 +685,7 @@ if (predictedConducted == 0) {
       targetText = 'At 75% threshold — avoid missing more';
     } else {
       targetIcon = Icons.check_circle_outline;
-      targetColor = Colors.greenAccent;
+      targetColor = _skyBlue; // Changed to skyBlue for success/safe state
       targetText = 'Can miss $margin more class${margin > 1 ? 'es' : ''} and stay ≥75%';
     }
   }
@@ -690,7 +697,7 @@ if (predictedConducted == 0) {
       decoration: BoxDecoration(
         color: _pitchBlack,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _neonPink.withOpacity(0.3), width: 1),
+        border: Border.all(color: _lightNavy.withOpacity(0.3), width: 1), // Changed color
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -710,7 +717,7 @@ if (predictedConducted == 0) {
                 'Slot: ${prediction['slot']}',
                 style: TextStyle(
                   fontSize: 11,
-                  color: _neonPink.withOpacity(0.7),
+                  color: _lightNavy.withOpacity(0.7), // Changed color
                 ),
               ),
               const SizedBox(width: 8),
@@ -740,7 +747,7 @@ if (predictedConducted == 0) {
                 '${prediction['currentPercentage'].toStringAsFixed(1)}%',
                 _white,
               ),
-              Icon(Icons.arrow_forward, color: _neonPink, size: 20),
+              Icon(Icons.arrow_forward, color: _lightNavy, size: 20), // Changed color
               _buildStatColumn(
                 'Predicted',
                 '${prediction['predictedPercentage'].toStringAsFixed(1)}%',
@@ -767,7 +774,7 @@ if (predictedConducted == 0) {
                 Expanded(
                   child: Text(
                     additionalClasses == 0
-                        ? 'No classes scheduled'
+                        ? 'No classes scheduled in range'
                         : percentageDrop > 0
                             ? 'Will drop by ${percentageDrop.toStringAsFixed(1)}%'
                             : 'No drop',

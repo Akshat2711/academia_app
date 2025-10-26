@@ -2,15 +2,15 @@
 import 'package:flutter/material.dart';
 import '../services/timetable_service.dart';
 import '../widgets/day_order_card.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ============================================================================
 // TIMETABLE SCREEN - Modern card-based timetable with horizontal scrolling
 // ============================================================================
 class TimetableScreen extends StatefulWidget {
-  // 1. Define view_dayorder as a final field on the Widget
   final int? view_dayorder;
 
-  // 2. Accept it in the constructor
   const TimetableScreen({super.key, this.view_dayorder});
   
   @override
@@ -18,17 +18,20 @@ class TimetableScreen extends StatefulWidget {
 }
 
 class _TimetableScreenState extends State<TimetableScreen> {
-  // 3. Remove the incorrect field assignment here. Access via widget.view_dayorder.
-  
   // --- COLOR PALETTE ---
-  static const Color _pitchBlack = Color(0xFF000000); // Pitch Black Background
-  static const Color _neonPink = Color(0xFFFF1493);  // Neon Reddish-Pink (Deep Pink)
-  static const Color _white = Colors.white;          // White Foreground/Text
+  static const Color _pitchBlack = Color(0xFF000000);
+  static const Color _neonPink = Color(0xFFFF1493);
+  static const Color _white = Colors.white;
+  static const Color _holidayGold = Color.fromARGB(255, 223, 223, 219);
+  static const Color _holidayOrange = Color.fromARGB(255, 169, 164, 162);
 
   bool _loading = true;
-  // Make PageController nullable and initialize it later
   late PageController _pageController; 
   final TimetableService _timetableService = TimetableService();
+  
+  // Holiday state
+  bool _isTodayHoliday = false;
+  String _holidayName = '';
 
   @override
   void initState() {
@@ -38,8 +41,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
   @override
   void dispose() {
-    // Check if _pageController has been initialized before disposing
-    // No need to check _timetableService.batchTimetable != null since _pageController is init in _loadTimetable
     _pageController.dispose();
     super.dispose();
   }
@@ -50,14 +51,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
     final success = await _timetableService.loadTimetable();
     
     if (success && _timetableService.batchTimetable != null) {
-      // Get the day order passed from the constructor (if any)
-      final int? passedDayOrder = widget.view_dayorder;
-
-      // Determine the day order to display:
-      // 1. Use passedDayOrder if it's valid (1-5).
-      // 2. Fall back to currentDayOrder if it's valid (1-5).
-      // 3. Default to 1 (first day) if neither is valid.
+      // Check if today is a holiday
+      await _checkTodayHoliday();
       
+      final int? passedDayOrder = widget.view_dayorder;
       final int currentDay = _timetableService.currentDayOrder;
       
       int targetDay = 1;
@@ -67,14 +64,144 @@ class _TimetableScreenState extends State<TimetableScreen> {
         targetDay = currentDay;
       }
 
-      // Calculate initialPage (PageController uses 0-based index)
       final initialPage = targetDay - 1; 
-
-      // Initialize page controller to start at the calculated page
       _pageController = PageController(initialPage: initialPage);
     }
     
     setState(() => _loading = false);
+  }
+
+  Future<void> _checkTodayHoliday() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final calendarJson = prefs.getString('calendar_cache');
+
+      if (calendarJson != null && calendarJson.isNotEmpty) {
+        final decoded = json.decode(calendarJson) as Map<String, dynamic>;
+        final calendarData = decoded.map((key, value) => MapEntry(
+          key,
+          Map<String, dynamic>.from(value as Map),
+        ));
+
+        final today = DateTime.now();
+        final todayKey = "${today.day}_${today.month}_${today.year}";
+
+        if (calendarData.containsKey(todayKey)) {
+          final events = calendarData[todayKey]?['event'] as List?;
+          if (events != null) {
+            for (var event in events) {
+              if (event is Map && event['type'] == 'holiday') {
+                setState(() {
+                  _isTodayHoliday = true;
+                  _holidayName = event['name'] ?? 'Holiday';
+                });
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Error checking holiday: $e');
+    }
+  }
+
+  Widget _buildHolidayBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            _holidayOrange.withOpacity(0.9),
+            _holidayGold.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _holidayGold,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _holidayGold.withOpacity(0.5),
+            blurRadius: 20,
+            spreadRadius: -5,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.celebration,
+                color: _white,
+                size: 32,
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  _holidayName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: _white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                Icons.celebration,
+                color: _white,
+                size: 32,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: _white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.event_available,
+                  color: _white,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'No Classes Today',
+                  style: TextStyle(
+                    color: _white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Swipe to view timetable for other days',
+            style: TextStyle(
+              color: _white.withOpacity(0.9),
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -124,6 +251,9 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 )
               : Column(
                   children: [
+                    // Show holiday banner if today is a holiday
+                    if (_isTodayHoliday) _buildHolidayBanner(),
+                    
                     // Day indicator dots
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -167,7 +297,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
                         controller: _pageController,
                         itemCount: 5,
                         onPageChanged: (index) {
-                          // Optional: track which page user is viewing
                           setState(() {});
                         },
                         itemBuilder: (context, index) {

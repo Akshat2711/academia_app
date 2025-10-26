@@ -62,42 +62,40 @@ class DayOrderManager {
   }
   
   /// Generate day order forecast for next N days
-  static Future<Map<String, int>> _generateDayOrderForecast({
-    required DateTime startDate,
-    required int startDayOrder,
-    required int days,
-  }) async {
-    Map<String, int> forecast = {};
-    DateTime currentDate = startDate;
-    int currentDayOrder = startDayOrder;
-    
-    // Get calendar events for holiday checking
-    final calendarEvents = await getEventsData();
-    
-    for (int i = 0; i < days; i++) {
-      final dateKey = _formatDate(currentDate);
-      
-      // Check if current date is a holiday
-      final isHoliday = _isHoliday(dateKey, calendarEvents);
-      
-      if (isHoliday) {
-        // Holiday keeps the same day order as previous working day
-        forecast[dateKey] = currentDayOrder;
-        print('🏖️ Holiday detected on $dateKey, keeping DO $currentDayOrder');
-      } else {
-        // Working day
-        forecast[dateKey] = currentDayOrder;
-        
-        // Increment day order for next iteration (1-5 cycle)
-        currentDayOrder = (currentDayOrder % 5) + 1;
-      }
-      
-      // Move to next date
-      currentDate = currentDate.add(const Duration(days: 1));
+static Future<Map<String, int>> _generateDayOrderForecast({
+  required DateTime startDate,
+  required int startDayOrder,
+  required int days,
+}) async {
+  Map<String, int> forecast = {};
+  DateTime currentDate = startDate;
+  int currentDayOrder = startDayOrder;
+
+  // Fetch calendar events once
+  final calendarEvents = await getEventsData();
+
+  for (int i = 0; i < days; i++) {
+    final dateKey = _formatDate(currentDate);
+    final isHoliday = _isHoliday(dateKey, calendarEvents);
+
+    if (isHoliday) {
+      // 🔹 Keep previous working day's day order (don’t increment yet)
+      forecast[dateKey] = currentDayOrder;
+      print('🏖️ Holiday detected on $dateKey, keeping DO $currentDayOrder');
+    } else {
+      // 🔹 For a working day, we assign the current DO
+      forecast[dateKey] = currentDayOrder;
+
+      // 🔹 And only AFTER assigning, we increment for next day
+      currentDayOrder = (currentDayOrder % 5) + 1;
     }
-    
-    return forecast;
+
+    currentDate = currentDate.add(const Duration(days: 1));
   }
+
+  return forecast;
+}
+
   
   /// Extend forecast when requested date is beyond saved range
   static Future<int?> _extendForecastAndGet(DateTime targetDate) async {

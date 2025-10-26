@@ -1,64 +1,63 @@
-
 import 'package:academia_app/screens/login_page.dart';
 import 'package:academia_app/screens/dasboardscreen.dart';
 import 'package:academia_app/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-//for firestore->
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-// Add timezone imports
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'services/firebase_notification.dart';
-//helper function to auto save data for graph attendance
 import 'package:academia_app/utils/auto_save_graph_data_onlogin.dart';
+import 'dart:async';
 
 void main() async {
-  // Ensure Flutter bindings are initialized
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-
-  // Keep splash screen visible until setup is done
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Initialize timezones BEFORE initializing notifications
+  // Initialize timezone synchronously (fast)
   tz.initializeTimeZones();
-  // Set to India timezone (Kallakurichi, Tamil Nadu)
   tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
-  
-  // Verify timezone is set correctly
-  print('Timezone set to: ${tz.local.name}');
-  print('Current time in local timezone: ${tz.TZDateTime.now(tz.local)}');
 
-  // Initialize notifications and local storage
+  // Initialize notifications early (lightweight)
   await NotificationService.init();
+
+  // Load user data async but don't block app start
   final prefs = await SharedPreferences.getInstance();
   final String? userData = prefs.getString('userData');
 
-  //firestore initialization
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  //for firebase notifications
-  await NotificationService_firestore().init();
-
-  // ============================================================================
-  // SAVE ATTENDANCE DATA ON APP START
-  // ============================================================================
-  if (userData != null && userData.isNotEmpty) {
-    await saveAttendanceDataOnAppStart(userData);
-  }
-
-  // Remove splash once setup completes
-  FlutterNativeSplash.remove();
-
-  // Run app
+  // Show UI immediately
   runApp(MyApp(isLoggedIn: userData != null));
+
+  // Remove splash screen after first frame rendered
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    FlutterNativeSplash.remove();
+
+    // Perform heavy or secondary setups in background
+    unawaited(_backgroundSetup(userData));
+  });
 }
 
+Future<void> _backgroundSetup(String? userData) async {
+  try {
+    // Initialize Firebase (can take time)
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+    // Initialize Firebase notifications
+    await NotificationService_firestore().init();
+
+    // Save attendance data only if logged in
+    if (userData != null && userData.isNotEmpty) {
+      await saveAttendanceDataOnAppStart(userData);
+    }
+
+    // Optional debug info
+    debugPrint('Background setup complete at ${DateTime.now()}');
+  } catch (e, st) {
+    debugPrint('⚠️ Background setup failed: $e\n$st');
+  }
+}
 
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;

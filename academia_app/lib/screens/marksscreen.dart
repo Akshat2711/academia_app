@@ -13,14 +13,14 @@ class MarksScreen extends StatefulWidget {
 }
 
 class _MarksScreenState extends State<MarksScreen> {
-  // --- COLOR PALETTE ---
+  // --- UPDATED COLOR PALETTE (GREEN/WHITE/BLACK/GRAY ONLY) ---
   static const Color _pitchBlack = Color(0xFF000000);
   static const Color _darkGray = Color(0xFF0F0F0F);
   static const Color _cardBg = Color(0xFF1A1A1A);
-  static const Color _neonGreen = Color(0xFF39FF14);
+  static const Color _neonGreen = Color(0xFF39FF14); // Primary Accent
   static const Color _white = Colors.white;
-  static const Color _neonYellow = Color(0xFFFFCC33);
-  static const Color _neonRed = Color(0xFFFF4081);
+  static const Color _cautionGreen = Color(0xFF76FF03); // Lighter green for caution
+  static const Color _declineGray = Color(0xFF505050); // Used in place of red/yellow for decline
   static const Color _textSecondary = Color(0xFFB0B0B0);
 
   Map<String, int> _courseCredits = {};
@@ -167,10 +167,11 @@ class _MarksScreenState extends State<MarksScreen> {
     };
   }
 
+  // UPDATED: Logic to use only shades of green and gray
   Color _getScoreColor(double percentage) {
-    if (percentage >= 85) return _neonGreen;
-    if (percentage >= 70) return _neonYellow;
-    return _neonRed;
+    if (percentage >= 85) return const Color.fromARGB(255, 147, 229, 132);
+    if (percentage >= 70) return const Color.fromARGB(255, 209, 242, 183);
+    return _declineGray; // Use dark gray for low scores
   }
 
   @override
@@ -207,6 +208,9 @@ class _MarksScreenState extends State<MarksScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
           if (_marks.isNotEmpty) ...[
+            // Assuming MarksStatsWidget uses the global color constants, 
+            // no change is needed here, but its implementation should also 
+            // adhere to the new palette.
             MarksStatsWidget(
               marks: _marks,
               courseCredits: _courseCredits,
@@ -241,28 +245,30 @@ class _MarksScreenState extends State<MarksScreen> {
     final List<double> percentages =
         tests.map((t) => (t['percentage'] as num).toDouble()).toList();
 
-    Color sparklineColor = const Color.fromARGB(255, 46, 123, 32);
+    // UPDATED: Trend colors to only use Green and Gray
+    Color sparklineColor = const Color.fromARGB(255, 174, 214, 167); // Default: Improvement/Good
+    Color lastPointColor = const Color.fromARGB(255, 241, 245, 240); // Default: Last score is good/improved
+
     if (percentages.length >= 2) {
       if (percentages.last < percentages[percentages.length - 2]) {
-        sparklineColor = const Color.fromARGB(255, 229, 60, 116);
+        // Decline: Use Dark Gray
+        sparklineColor = _declineGray; 
+        lastPointColor = _declineGray; 
+      } else if (percentages.last == percentages[percentages.length - 2]) {
+        // Steady: Use Caution Green
+        lastPointColor = _cautionGreen; 
+        sparklineColor = _cautionGreen;
       }
+      // If percentages.last > percentages[percentages.length - 2], keep _neonGreen
     }
 
-    Color lastPointColor = _neonGreen;
-    if (percentages.length >= 2) {
-      if (percentages.last < percentages[percentages.length - 2]) {
-        lastPointColor = _neonRed;
-      } else if (percentages.last == percentages[percentages.length - 2]) {
-        lastPointColor = _neonYellow;
-      }
-    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: _cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _neonGreen.withOpacity(0.3), width: 0.8),
+        
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -305,6 +311,7 @@ class _MarksScreenState extends State<MarksScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
+                      // Uses the updated score color logic (only green/gray)
                       color: _getScoreColor(overallPercentage)
                           .withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
@@ -317,7 +324,8 @@ class _MarksScreenState extends State<MarksScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: _getScoreColor(overallPercentage),
+                            // Uses the updated score color logic
+                            color: _getScoreColor(overallPercentage), 
                             letterSpacing: 0.2,
                           ),
                         ),
@@ -326,6 +334,7 @@ class _MarksScreenState extends State<MarksScreen> {
                           '${overallPercentage.toStringAsFixed(0)}%',
                           style: TextStyle(
                             fontSize: 11,
+                            // Uses the updated score color logic
                             color: _getScoreColor(overallPercentage)
                                 .withOpacity(0.8),
                             fontWeight: FontWeight.w500,
@@ -345,6 +354,7 @@ class _MarksScreenState extends State<MarksScreen> {
                   height: 50,
                   child: _MarksTrendSparkline(
                     percentages: percentages,
+                    // Uses the updated sparkline trend colors
                     lineColor: sparklineColor,
                     lastPointColor: lastPointColor,
                   ),
@@ -400,6 +410,7 @@ class _MarksScreenState extends State<MarksScreen> {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
+                          // Uses the updated score color logic
                           color: _getScoreColor(test['percentage'])
                               .withOpacity(0.12),
                           borderRadius: BorderRadius.circular(8),
@@ -407,6 +418,7 @@ class _MarksScreenState extends State<MarksScreen> {
                         child: Text(
                           '${(test['percentage'] as double).toStringAsFixed(0)}%',
                           style: TextStyle(
+                            // Uses the updated score color logic
                             color: _getScoreColor(test['percentage']),
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
@@ -435,7 +447,7 @@ class _MarksScreenState extends State<MarksScreen> {
 }
 
 // =======================================================================
-// Marks Trend Sparkline
+// Marks Trend Sparkline (Color constants updated inside the class)
 // =======================================================================
 
 class _MarksTrendSparkline extends StatelessWidget {
@@ -562,7 +574,8 @@ class _MarksTrendPainter extends CustomPainter {
     final pointPaint = Paint()..style = PaintingStyle.fill;
 
     for (int i = 0; i < points.length - 1; i++) {
-      pointPaint.color = lineColor.withOpacity(0.6);
+      // Use the line color for internal points
+      pointPaint.color = lineColor.withOpacity(0.6); 
       canvas.drawCircle(points[i], 2.5, pointPaint);
     }
 
