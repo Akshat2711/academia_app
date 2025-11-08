@@ -1,0 +1,3 @@
+-keep class ** { *; }
+-keepresourcexmlelements manifest/application/meta-data
+-keepresources path res/drawable*/ic_stat_notification.png
