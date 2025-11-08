@@ -21,27 +21,41 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+  
+  // Keys to force rebuild of screens when data is refreshed
+  Key _attendanceKey = UniqueKey();
+  Key _marksKey = UniqueKey();
+  Key _timetableKey = UniqueKey();
 
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const AttendanceScreen(),
-    const MarksScreen(),
-    const TimetableScreen(),
-  ];
+  List<Widget> _buildScreens() {
+    return [
+      HomeScreen(
+        onDataRefreshed: () {
+          // When HomeScreen refreshes data, rebuild other screens
+          setState(() {
+            _attendanceKey = UniqueKey();
+            _marksKey = UniqueKey();
+            _timetableKey = UniqueKey();
+          });
+        },
+      ),
+      AttendanceScreen(key: _attendanceKey),
+      MarksScreen(key: _marksKey),
+      TimetableScreen(key: _timetableKey),
+    ];
+  }
 
   @override
   void initState() {
     super.initState();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: _buildScreens(),
       ),
 ////////debug screen///////////////////////////////////////////////////////
 /*       floatingActionButton: FloatingActionButton(

@@ -294,17 +294,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         targetText = need == 0
             ? 'Almost at 75%'
             : 'Attend $need more class${need > 1 ? 'es' : ''} to reach 75%';
-        targetColor = _deepBlue; // Dark blue for warning
+        targetColor = const Color.fromARGB(255, 246, 100, 100); // Dark blue for warning
         targetIcon = Icons.trending_up;
       } else {
         final margin = ((attended / 0.75) - conducted).floor().clamp(0, 999);
         if (margin <= 0) {
           targetText = 'At 75% threshold — stay consistent';
-          targetColor = _lightNavy; // Light navy for caution
+          targetColor = const Color.fromARGB(255, 246, 180, 100); // Light navy for caution
           targetIcon = Icons.warning_amber_rounded;
         } else {
           targetText = 'Can miss $margin class${margin > 1 ? 'es' : ''} safely';
-          targetColor = _skyBlue; // Sky blue for good
+          targetColor = const Color.fromARGB(255, 222, 235, 246); // Sky blue for good
           targetIcon = Icons.trending_down;
         }
       }

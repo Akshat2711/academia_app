@@ -316,29 +316,38 @@ void _calculatePredictions() {
   final courseClassCount = _countClassesPerCourse(dayOrders);
   
   List<Map<String, dynamic>> predictions = [];
-  
+    
   for (var course in _enrichedCourses) {
-    final String title = course['title'] ?? '';
-    final String category = course['category'] ?? '';
-    final String slot = course['slot'] ?? '';
-    final int currentConducted = course['conducted'] ?? 0;
-    final int currentAbsent = course['absent'] ?? 0;
-    final int currentPresent = currentConducted - currentAbsent;
-    final double currentPercentage = course['percentage'] ?? 0.0;
-    
-    // Create unique key for this course
-    final key = '$title|$category|$slot';
-    
-    // Get class count for classes you'll attend
-    final int classesToAttend = courseClassCountBetween[key] ?? 0;
-    
-    // Get class count for classes you'll miss
-    final int classesToMiss = courseClassCount[key] ?? 0;
-    
-    // Predict new values
-    final int predictedPresent = currentPresent + classesToAttend;
-    final int predictedConducted = currentConducted + classesToAttend + classesToMiss;
-    final int predictedAbsent = currentAbsent + classesToMiss;
+      final String title = course['title'] ?? '';
+      final String category = course['category'] ?? '';
+      final String slot = course['slot'] ?? '';
+      
+      // Create unique key for this course
+      final key = '$title|$category|$slot';
+      
+      // Get class count for classes you'll attend BEFORE leave
+      final int classesToAttend = courseClassCountBetween[key] ?? 0;
+      
+      // Get class count for classes you'll miss DURING leave
+      final int classesToMiss = courseClassCount[key] ?? 0;
+      
+      // Calculate INITIAL state (from stored data)
+      final int initialConducted = course['conducted'] ?? 0;
+      final int initialAbsent = course['absent'] ?? 0;
+      final int initialPresent = initialConducted - initialAbsent;
+      
+      // Calculate CURRENT state (after attending classes before leave)
+      final int currentConducted = initialConducted + classesToAttend;
+      final int currentPresent = initialPresent + classesToAttend;
+      final int currentAbsent = initialAbsent; // Absent count doesn't change until leave period
+      final double currentPercentage = currentConducted > 0
+          ? (currentPresent / currentConducted) * 100
+          : (course['percentage'] ?? 0.0);
+      
+      // Predict new values (after missing classes during leave)
+      final int predictedPresent = currentPresent; // No additional attendance during leave
+      final int predictedConducted = currentConducted + classesToMiss;
+      final int predictedAbsent = currentAbsent + classesToMiss;
     final double predictedPercentage = predictedConducted > 0
         ? (predictedPresent / predictedConducted) * 100
         : 0.0;
@@ -351,7 +360,7 @@ void _calculatePredictions() {
       displayTitle = '$title ($category)';
     }
     
-    predictions.add({
+  predictions.add({
       'title': displayTitle,
       'currentPercentage': currentPercentage,
       'predictedPercentage': predictedPercentage,
@@ -360,6 +369,9 @@ void _calculatePredictions() {
       'currentConducted': currentConducted,
       'predictedConducted': predictedConducted,
       'classesToAttend': classesToAttend,
+      'currentAbsent': currentAbsent,
+      'currentAttended': currentPresent,
+      'predictedAbsent': predictedAbsent,
       'slot': slot,
     });
   }
@@ -632,12 +644,12 @@ final int classesToAttend = prediction['classesToAttend'] ?? 0;
 final int additionalClasses = prediction['additionalClasses'] ?? 0;
 
 // CALCULATE CURRENT ATTENDED (present)
-final int currentAbsent = (currentConducted * (100 - currentPercentage) / 100).round();
-final int currentAttended = currentConducted - currentAbsent;
+final int currentAbsent = prediction['currentAbsent'] ?? 0;
+final int currentAttended = prediction['currentAttended'] ?? 0;
+final int predictedAbsent = prediction['predictedAbsent'] ?? 0;
 
-// CALCULATE PREDICTED ATTENDED (after attending classes before holiday and missing during holiday)
-final int predictedAttended = currentAttended + classesToAttend;
-final int predictedAbsent = currentAbsent + additionalClasses;
+// CALCULATE PREDICTED ATTENDED (same as current since no attendance during leave)
+final int predictedAttended = currentAttended;
 
 // TARGET CALCULATION FOR PREDICTED STATE
 String targetText = '';

@@ -216,13 +216,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
         backgroundColor: _pitchBlack,
         foregroundColor: _neonPink,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadTimetable,
-            tooltip: 'Refresh',
-          ),
-        ],
+
       ),
       body: _loading
           ? const Center(

@@ -23,7 +23,9 @@ import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 // HOME SCREEN - Student profile and overview
 // ============================================================================
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onDataRefreshed;
+  
+  const HomeScreen({super.key, this.onDataRefreshed});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -143,8 +145,23 @@ class _HomeScreenState extends State<HomeScreen> {
         final now = DateTime.now().toIso8601String();
         await prefs.setString('lastRefreshTime', now);
         
-        // Reload the data
+        // **KEY CHANGE: Reset all state variables to trigger complete rebuild**
+        setState(() {
+          studentInfo = null;
+          _overallAttendance = 0.0;
+          _courseCount = 0;
+          _totalCredits = 0;
+          _courses = [];
+          _advisors = {};
+          _lastRefreshText = '';
+          _loading = true;
+        });
+        
+        // Reload the data with complete UI rebuild
         await _loadUserData();
+        
+        // Notify dashboard that data was refreshed
+        widget.onDataRefreshed?.call();
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -361,7 +378,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () async {
                   final prefs = await SharedPreferences.getInstance();
                   // Remove all user stored data in local storage
-                  await prefs.clear();
+                  await prefs.remove('userData');
+                  await prefs.remove('customEvents');
+                  await prefs.remove('GRAPH_ATTENDANCE');
+                  await prefs.remove('userEmail');
+                  await prefs.remove('userPassword');
+
 
                   if (!mounted) return;
 

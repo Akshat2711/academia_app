@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -152,7 +151,6 @@ class AttendanceTrendWidget extends StatefulWidget {
 
 class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
   // --- BLUE SHADES ONLY COLOR PALETTE ---
-  static const Color _bgBlack = Color(0xFF0A0A0A);
   static const Color _navyBlue = Color(0xFF2C5F9E);
   static const Color _lightNavy = Color(0xFF4A7DC4);
   static const Color _skyBlue = Color(0xFF64B5F6);
@@ -444,71 +442,11 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
 
         const SizedBox(height: 12),
 
-        // Stats row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildStatChip(
-              Icons.trending_up,
-              'Peak',
-              '${displayData.map((e) => e.percentage).reduce((a, b) => a > b ? a : b).toStringAsFixed(1)}%',
-              _skyBlue,
-            ),
-            _buildStatChip(
-              Icons.trending_down,
-              'Low',
-              '${displayData.map((e) => e.percentage).reduce((a, b) => a < b ? a : b).toStringAsFixed(1)}%',
-              _deepBlue,
-            ),
-            _buildStatChip(
-              Icons.analytics_outlined,
-              'Avg',
-              '${(displayData.map((e) => e.percentage).reduce((a, b) => a + b) / displayData.length).toStringAsFixed(1)}%',
-              _lightNavy,
-            ),
-          ],
-        ),
+     
       ],
     );
   }
 
-  Widget _buildStatChip(IconData icon, String label, String value, Color color) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.2), width: 1),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9,
-                color: _white.withOpacity(0.6),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ============================================================================
