@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CalendarCache {
   static Map<String, Map<String, dynamic>>? lastData;
   static DateTime? lastRefresh;
-  static const Duration cacheDuration = Duration(minutes: 10); // Cache limit
+  static const Duration cacheDuration = Duration(minutes: 30); // Cache limit
 }
 
 /// Fetch calendar events with caching logic

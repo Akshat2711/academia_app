@@ -6,7 +6,7 @@ typedef AnnouncementMap = Map<String, dynamic>;
 class AnnouncementCache {
   static Map<String, AnnouncementMap>? lastData;
   static DateTime? lastRefresh;
-  static const Duration cacheDuration = Duration(minutes: 10); // ✅ Set cache time
+  static const Duration cacheDuration = Duration(minutes: 30); // ✅ Set cache time
 }
 
 Future<Map<String, AnnouncementMap>> getEventsData() async {

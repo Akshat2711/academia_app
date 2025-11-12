@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+// Screens
+import 'package:academia_app/screens/cgpa_calculator.dart';
+
+//FOR IOS LIKE TRANSITION
+import 'package:flutter/cupertino.dart'; 
 
 // ============================================================================
 // MARKS STATISTICS WIDGET - Overall performance summary
@@ -132,6 +137,37 @@ class MarksStatsWidget extends StatelessWidget {
                 ),
               ),
             ],
+
+            // CGPA Calculator Button
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                   Navigator.push(
+                    context,
+                    CupertinoPageRoute(builder: (_) => const CGPACalculator()),
+                );
+                },
+                icon: const Icon(Icons.calculate_rounded, size: 20),
+                label: const Text(
+                  'Open Calculator',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 171, 245, 166).withOpacity(0.1),
+                  foregroundColor: _white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -199,7 +235,7 @@ class MarksStatsWidget extends StatelessWidget {
     );
   }
 
-  // --- (The calculation methods remain unchanged) ---
+  // --- Calculation Methods ---
 
   Map<String, dynamic> _calculateStats() {
     double totalObtained = 0;
@@ -213,7 +249,7 @@ class MarksStatsWidget extends StatelessWidget {
       
       if (tests.isEmpty) continue;
 
-      // Calculate course average
+      // Calculate course total (sum of all tests in the course)
       double courseObtained = 0;
       double courseMax = 0;
       
@@ -228,10 +264,10 @@ class MarksStatsWidget extends StatelessWidget {
       totalObtained += courseObtained;
       totalMax += courseMax;
 
-      // Calculate grade points for this course
+      // Calculate grade points for this course based on marks cut
       if (courseMax > 0) {
-        final coursePercentage = (courseObtained / courseMax) * 100;
-        final gradePoint = _percentageToGradePoint(coursePercentage);
+        final marksCut = courseMax - courseObtained;
+        final gradePoint = _marksCutToGradePoint(marksCut);
         
         // Try to get credits for this course
         int credits = 3; // Default credits
@@ -260,14 +296,15 @@ class MarksStatsWidget extends StatelessWidget {
     };
   }
 
-  double _percentageToGradePoint(double percentage) {
-    if (percentage >= 90) return 10.0;
-    if (percentage >= 80) return 9.0;
-    if (percentage >= 70) return 8.0;
-    if (percentage >= 60) return 7.0;
-    if (percentage >= 55) return 6.0;
-    if (percentage >= 50) return 5.0;
-    return 0.0;
+  // New method: Calculate grade point based on marks cut in a subject
+  double _marksCutToGradePoint(double marksCut) {
+    if (marksCut < 10) return 10.0;  // O grade if less than 10 marks cut
+    if (marksCut < 20) return 9.0;   // A+ if 10-19 marks cut
+    if (marksCut < 30) return 8.0;   // A if 20-29 marks cut
+    if (marksCut < 40) return 7.0;   // B+ if 30-39 marks cut
+    if (marksCut < 45) return 6.0;   // B if 40-44 marks cut
+    if (marksCut < 50) return 5.0;   // C if 45-49 marks cut
+    return 0.0;                       // F if 50+ marks cut
   }
 
   String _percentageToGrade(double percentage) {

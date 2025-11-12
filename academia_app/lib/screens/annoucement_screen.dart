@@ -33,18 +33,19 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   // Helper function to launch URLs
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      // ignore: avoid_print
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication, //Force open in browser
+    )) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $url')),
+          SnackBar(content: Text('Could not open the link')),
         );
       }
       print('Could not launch $url');
     }
   }
+
 
   // Helper function to parse and format the date
   String _formatDate(String dateString) {

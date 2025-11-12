@@ -1,4 +1,4 @@
-package com.example.academia_app
+package com.akshat.academia
 
 import io.flutter.embedding.android.FlutterActivity
 

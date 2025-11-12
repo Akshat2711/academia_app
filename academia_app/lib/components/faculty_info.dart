@@ -39,7 +39,7 @@ class FacultyInfo extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Faculty Advisors',
+            'Advisors',
             style: TextStyle(
               color: Colors.white,
               fontSize: 18,

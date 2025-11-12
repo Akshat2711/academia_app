@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:academia_app/screens/cgpa_calculator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -258,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final code = e['course_code']?.toString() ?? '';
                   final title = e['course_title']?.toString() ?? '';
                   final credits = e['credit'] is num ? (e['credit'] as num).toInt() : 0;
-                  final faculty = _extractFacultyName(e['faculty_name']);
+                  final faculty = e['faculty_name']?.toString() ?? '';
                   final slot = e['slot']?.toString() ?? '';
                   final room = e['room_no']?.toString() ?? e['room']?.toString() ?? '';
                   final category = e['category']?.toString() ?? '';
@@ -317,14 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String _extractFacultyName(dynamic facultyName) {
-    if (facultyName == null) return '';
-    final str = facultyName.toString();
-    if (str.isEmpty) return '';
-    // Extract name before parenthesis if exists
-    final parts = str.split('(');
-    return parts.first.trim();
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -397,33 +391,69 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 8),
             ],
           ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _buildProfileCard(displayName, regno, program, specialization, semester),
-                const SizedBox(height: 16),
-                _buildStatsGrid(),
-                const SizedBox(height: 16),
-                _buildQuickActions(),
-                if (_courses.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    'Your Courses',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ..._courses.map((course) => SubjectInfo(course: course)),
-                ],
-                FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
-                const SizedBox(height: 100),
-              ]),
+SliverPadding(
+  padding: const EdgeInsets.all(16),
+  sliver: SliverList(
+    delegate: SliverChildListDelegate([
+      // Info banner at the top
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: const Color.fromARGB(255, 166, 171, 181), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Tip: Pull down from the top to refresh data.',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                ),
+              ),
             ),
+          ],
+        ),
+      ),
+
+      const SizedBox(height: 16),
+
+      // Profile Card
+      _buildProfileCard(displayName, regno, program, specialization, semester),
+      const SizedBox(height: 16),
+
+      // Stats Grid
+      _buildStatsGrid(),
+      const SizedBox(height: 16),
+
+      // Quick Actions
+      _buildQuickActions(),
+
+      // Courses Section
+      if (_courses.isNotEmpty) ...[
+        const SizedBox(height: 24),
+        Text(
+          'Your Courses',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
+        ),
+        const SizedBox(height: 12),
+        ..._courses.map((course) => SubjectInfo(course: course)),
+      ],
+
+      // Faculty Info
+      FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
+      const SizedBox(height: 100),
+    ]),
+  ),
+),
+
         ],
       ),
     ),
@@ -618,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 8),
         _buildActionButton(
           Icons.calendar_month,
-          'calender',
+          'Calender',
           _primaryColor,
           onTap: () {
             Navigator.push(
@@ -634,6 +664,16 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               CupertinoPageRoute(builder: (_) => const LinksScreen()),
+            );
+          },
+        ), // Orange
+                const SizedBox(height: 8),
+        _buildActionButton(
+          Icons.calculate_outlined, 'Calculator', _primaryColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              CupertinoPageRoute(builder: (_) => const CGPACalculator()),
             );
           },
         ), // Orange
