@@ -9,6 +9,10 @@ import '../screens/login_page.dart';
 import 'calender_screen.dart';
 import '../screens/annoucement_screen.dart';
 import '../screens/imp_links_screen.dart';
+import '../screens/studymaterial_screen.dart';
+
+//profile card
+import '../widgets/profile_card_widget.dart';
 
 //FOR IOS LIKE TRANSITION
 import 'package:flutter/cupertino.dart'; 
@@ -175,14 +179,14 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Refresh failed: ${response.body}')),
+            SnackBar(content: Text('Something went wrong')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error refreshing: $e')),
+          SnackBar(content: Text('Error refreshing data')),
         );
       }
     }
@@ -422,7 +426,14 @@ SliverPadding(
       const SizedBox(height: 16),
 
       // Profile Card
-      _buildProfileCard(displayName, regno, program, specialization, semester),
+      SlidingProfileAnnouncementWidget(
+        name: displayName,
+        regno: regno,
+        program: program,
+        specialization:specialization,
+        semester: semester,
+      ),
+      
       const SizedBox(height: 16),
 
       // Stats Grid
@@ -467,99 +478,7 @@ SliverPadding(
 
 
 
-  Widget _buildProfileCard(String name, String regno, String program, String specialization, String semester) {
-    return TweenAnimationBuilder(
-      duration: const Duration(milliseconds: 600),
-      tween: Tween<double>(begin: 0, end: 1),
-      builder: (context, double value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          // Use an orange gradient for the profile card
-          gradient: LinearGradient(
-            colors: [const Color.fromARGB(201, 255, 153, 0), _primaryColor],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: _primaryColor.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 32),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        regno,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Divider(color: Colors.white24),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.school, program),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.analytics, specialization),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.book, 'Semester $semester'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        const Icon(Icons.info_outline, color: Colors.white70, size: 18), // Used a standard icon for dark theme visibility
-        const SizedBox(width: 12),
-        Text(
-          text,
-          style: const TextStyle(color: Colors.white, fontSize: 15),
-        ),
-      ],
-    );
-  }
+ 
 
   Widget _buildStatsGrid() {
     final attendance = _overallAttendance;
@@ -636,7 +555,19 @@ SliverPadding(
             color: Colors.white, // White text for section title
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
+        _buildActionButton(
+          Icons.menu_book_sharp,
+          'Study Material',
+          _primaryColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              CupertinoPageRoute(builder: (_) => const MaterialsScreen()),
+            );
+          },
+        ), // orange
+        const SizedBox(height: 8),
         _buildActionButton(Icons.announcement_outlined, 'Announcement', _primaryColor,
          onTap: () {
             Navigator.push(

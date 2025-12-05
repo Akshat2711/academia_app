@@ -17,7 +17,7 @@ class _MarksScreenState extends State<MarksScreen> {
   static const Color _pitchBlack = Color(0xFF000000);
   static const Color _darkGray = Color(0xFF0F0F0F);
   static const Color _cardBg = Color(0xFF1A1A1A);
-  static const Color _neonGreen = Color(0xFF39FF14); // Primary Accent
+  static const Color _neonGreen = Color.fromARGB(255, 70, 71, 73); // Primary Accent
   static const Color _white = Colors.white;
   static const Color _cautionGreen = Color(0xFF76FF03); // Lighter green for caution
   static const Color _declineGray = Color(0xFF505050); // Used in place of red/yellow for decline
@@ -33,119 +33,153 @@ class _MarksScreenState extends State<MarksScreen> {
     _loadMarksFromPrefs();
   }
 
-  Future<void> _loadMarksFromPrefs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (prefs.containsKey('userData')) {
-        final raw = prefs.getString('userData');
-        if (raw != null && raw.isNotEmpty) {
-          final Map<String, dynamic> data = json.decode(raw);
-          var marksRoot = data['marks'];
+Future<void> _loadMarksFromPrefs() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('userData');
+    if (raw == null || raw.isEmpty) return;
 
-          // Extract course credits
-          if (data['timetable'] != null && data['timetable']['courses'] != null) {
-            final timetableCourses = data['timetable']['courses'];
-            if (timetableCourses is List) {
-              for (final course in timetableCourses) {
-                if (course is Map) {
-                  final title = course['course_title'];
-                  final credit = course['credit'];
-                  if (title != null && credit != null) {
-                    _courseCredits[title.toString()] = (credit is int)
-                        ? credit
-                        : int.tryParse(credit.toString()) ?? 3;
-                  }
-                }
-              }
-            }
-          }
+    final Map<String, dynamic> data = json.decode(raw);
 
-          // If not at top-level, check under attendance
-          if (marksRoot == null &&
-              data['attendance'] != null &&
-              data['attendance'] is Map) {
-            final attendanceRoot = data['attendance'] as Map;
-            if (attendanceRoot['marks'] != null) {
-              var candidate = attendanceRoot['marks'];
-              if (candidate is String && candidate.isNotEmpty) {
-                try {
-                  candidate = json.decode(candidate);
-                } catch (e) {
-                  // ignore: avoid_print
-                  print('Failed to decode attendance.marks string: $e');
-                }
-              }
-              marksRoot = candidate;
-            }
-          }
+    // --- Extract course credits and build course map from timetable ---
+    final Map<String, dynamic> timetableCourseMap = {};
+    _courseCredits.clear();
+    if (data['timetable'] != null && data['timetable']['courses'] != null) {
+      final timetableCourses = data['timetable']['courses'];
+      if (timetableCourses is List) {
+        for (final course in timetableCourses) {
+          if (course is Map) {
+            final title = course['course_title'];
+            final credit = course['credit'];
+            final codeRaw = course['course_code'] ?? '';
 
-          if (marksRoot != null && marksRoot is Map) {
-            final parsed = <Map<String, dynamic>>[];
+            // normalize keys for lookups: keep original code and base code (without Theory/Practical)
+            final baseCode = codeRaw
+                .toString()
+                .replaceAll(RegExp(r'(Regular)?(Theory|Practical)$'), '');
 
-            // Build course title mapping
-            final Map<String, String> courseTitleMap = {};
-            if (data['attendance'] != null &&
-                data['attendance']['attendance'] != null) {
-              final courses = data['attendance']['attendance']['courses'];
-              if (courses is Map) {
-                courses.forEach((key, courseData) {
-                  if (courseData is Map &&
-                      courseData['course_title'] != null) {
-                    final baseCode = key
-                        .toString()
-                        .replaceAll(RegExp(r'Regular(Theory|Practical)$'), '');
-                    courseTitleMap[baseCode] = courseData['course_title'];
-                  }
-                });
-              }
+            if (title != null) {
+              timetableCourseMap[codeRaw.toString()] = course;
+              timetableCourseMap[baseCode] = course;
             }
 
-            marksRoot.forEach((code, value) {
-              if (value is Map) {
-                final tests = <Map<String, dynamic>>[];
-                final testsRaw = value['tests'];
-                if (testsRaw is List) {
-                  for (final t in testsRaw) {
-                    if (t is Map) {
-                      tests.add({
-                        'name': t['test_name'] ?? '',
-                        'obtained': (t['obtained_marks'] is num)
-                            ? (t['obtained_marks'] as num).toDouble()
-                            : (t['obtained_marks'] ?? 0),
-                        'max': t['max_marks'] ?? 0,
-                        'percentage': (t['percentage'] is num)
-                            ? (t['percentage'] as num).toDouble()
-                            : 0.0,
-                      });
-                    }
-                  }
-                }
-
-                final baseCode =
-                    code.toString().replaceAll(RegExp(r'(Theory|Practical)$'), '');
-                final courseTitle = courseTitleMap[baseCode] ?? code;
-
-                parsed.add({
-                  'title': courseTitle,
-                  'type': value['course_type'] ?? 'Theory',
-                  'tests': tests,
-                });
-              }
-            });
-            if (parsed.isNotEmpty) {
-              setState(() {
-                _marks = parsed;
-              });
+            if (title != null && credit != null) {
+              _courseCredits[title.toString()] = (credit is int)
+                  ? credit
+                  : int.tryParse(credit.toString()) ?? 3;
             }
           }
         }
       }
-    } catch (e) {
-      // ignore
-    } finally {
-      setState(() => _loading = false);
     }
+
+    // --- Find marks root (prefer top-level 'marks', else check attendance.marks like before) ---
+    var marksRoot = data['marks'];
+    if (marksRoot == null &&
+        data['attendance'] != null &&
+        data['attendance'] is Map) {
+      final attendanceRoot = data['attendance'] as Map;
+      if (attendanceRoot['marks'] != null) {
+        var candidate = attendanceRoot['marks'];
+        if (candidate is String && candidate.isNotEmpty) {
+          try {
+            candidate = json.decode(candidate);
+          } catch (e) {
+            // ignore: avoid_print
+            print('Failed to decode attendance.marks string: $e');
+          }
+        }
+        marksRoot = candidate;
+      }
+    }
+
+    if (marksRoot != null && marksRoot is Map) {
+      final parsed = <Map<String, dynamic>>[];
+
+      // build fallback courseTitleMap from attendance (only if timetable mapping missing)
+      final Map<String, String> attendanceTitleMap = {};
+      if (data['attendance'] != null &&
+          data['attendance']['attendance'] != null) {
+        final courses = data['attendance']['attendance']['courses'];
+        if (courses is Map) {
+          courses.forEach((key, courseData) {
+            if (courseData is Map && courseData['course_title'] != null) {
+              final baseCode = key
+                  .toString()
+                  .replaceAll(RegExp(r'Regular(Theory|Practical)$'), '');
+              attendanceTitleMap[baseCode] = courseData['course_title'];
+            }
+          });
+        }
+      }
+
+      marksRoot.forEach((code, value) {
+        if (value is Map) {
+          final tests = <Map<String, dynamic>>[];
+          final testsRaw = value['tests'];
+          if (testsRaw is List) {
+            for (final t in testsRaw) {
+              if (t is Map) {
+                tests.add({
+                  'name': t['test_name'] ?? '',
+                  'obtained': (t['obtained_marks'] is num)
+                      ? (t['obtained_marks'] as num).toDouble()
+                      : (t['obtained_marks'] != null
+                          ? double.tryParse(t['obtained_marks'].toString()) ??
+                              0.0
+                          : 0.0),
+                  'max': (t['max_marks'] is num)
+                      ? (t['max_marks'] as num).toDouble()
+                      : (t['max_marks'] != null
+                          ? double.tryParse(t['max_marks'].toString()) ?? 0.0
+                          : 0.0),
+                  'percentage': (t['percentage'] is num)
+                      ? (t['percentage'] as num).toDouble()
+                      : (t['percentage'] != null
+                          ? double.tryParse(t['percentage'].toString()) ?? 0.0
+                          : 0.0),
+                });
+              }
+            }
+          }
+
+          // normalize course code (remove Theory/Practical suffixes)
+          final baseCode =
+              code.toString().replaceAll(RegExp(r'(Theory|Practical)$'), '');
+
+          // Try to get course title from timetable first, else attendance fallback, else use code
+          String courseTitle = code;
+          final courseFromTimetable = timetableCourseMap[code] ??
+              timetableCourseMap[baseCode]; // check both keys
+          if (courseFromTimetable is Map && courseFromTimetable['course_title'] != null) {
+            courseTitle = courseFromTimetable['course_title'].toString();
+          } else if (attendanceTitleMap.containsKey(baseCode)) {
+            courseTitle = attendanceTitleMap[baseCode]!;
+          }
+
+          parsed.add({
+            'title': courseTitle,
+            'type': value['course_type'] ?? 'Theory',
+            'tests': tests,
+          });
+        }
+      });
+
+      if (parsed.isNotEmpty) {
+        setState(() {
+          _marks = parsed;
+        });
+      }
+    }
+  } catch (e) {
+    // ignore or log
+    // ignore: avoid_print
+    print('Error loading marks: $e');
+  } finally {
+    setState(() => _loading = false);
   }
+}
+
 
   Map<String, dynamic> _calculateCourseTotals(
       List<Map<String, dynamic>> tests) {
@@ -257,8 +291,8 @@ class _MarksScreenState extends State<MarksScreen> {
         lastPointColor = _declineGray; 
       } else if (percentages.last == percentages[percentages.length - 2]) {
         // Steady: Use Caution Green
-        lastPointColor = _cautionGreen; 
-        sparklineColor = _cautionGreen;
+        lastPointColor = const Color.fromARGB(255, 220, 227, 215); 
+        sparklineColor = const Color.fromARGB(255, 166, 206, 136);
       }
       // If percentages.last > percentages[percentages.length - 2], keep original colors
     }

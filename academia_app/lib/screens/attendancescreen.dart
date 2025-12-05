@@ -152,31 +152,44 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               children: [
                 _buildOverallCard(),
                 const SizedBox(height: 28),
-                Text(
-                  'Course-wise Details',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: _whiteSecondary,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+
                 const SizedBox(height: 16),
-                if (_courses.isNotEmpty)
-                  ..._courses.map((course) => _buildCourseCard(course))
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
-                      child: Text(
-                        'No attendance data available',
-                        style: TextStyle(
-                          color: _white.withOpacity(0.4),
-                          fontSize: 15,
-                        ),
-                      ),
+           
+                if (_courses.isNotEmpty) ...[
+                  Text(
+                    'Course-wise Details',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: _whiteSecondary,
+                      letterSpacing: 0.5,
                     ),
                   ),
+                  ..._courses.map((course) => _buildCourseCard(course)),
+                ] else ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.folder_off_rounded,
+                          color: _white.withOpacity(0.35),
+                          size: 40,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'No attendance data available',
+                          style: TextStyle(
+                            color: _white.withOpacity(0.4),
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 80),
               ],
             ),

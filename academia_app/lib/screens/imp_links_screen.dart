@@ -37,7 +37,7 @@ class LinksScreen extends StatelessWidget {
         elevation: 0,
         // Title style updated to normal white text
         title: const Text(
-          "Data Web Links",
+          "Important Links",
           style: TextStyle(
             color: kTitleColor,
             fontSize: 20,
