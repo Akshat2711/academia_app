@@ -241,27 +241,39 @@ Future<void> _loadMarksFromPrefs() async {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          if (_marks.isNotEmpty) ...[
-            // Assuming MarksStatsWidget uses the global color constants, 
-            // no change is needed here, but its implementation should also 
-            // adhere to the new palette.
             MarksStatsWidget(
               marks: _marks,
               courseCredits: _courseCredits,
             ),
+          if (_marks.isNotEmpty) ...[
+            // Assuming MarksStatsWidget uses the global color constants, 
+            // no change is needed here, but its implementation should also 
+            // adhere to the new palette.
+
             const SizedBox(height: 20),
             ..._marks.map((course) => _buildCourseMarksCard(course))
           ] else
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Center(
-                child: Text('No data found',
-                    style: TextStyle(
-                        color: _textSecondary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500)),
-              ),
-            ),
+                 Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.folder_off_rounded,
+                          color: _white.withOpacity(0.35),
+                          size: 40,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'No Marks data available',
+                          style: TextStyle(
+                            color: _white.withOpacity(0.4),
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           const SizedBox(height: 80),
         ],
       ),

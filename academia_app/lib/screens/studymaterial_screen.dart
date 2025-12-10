@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Import for local storage
 
@@ -185,7 +186,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                       onTap: () {
                          Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => SubjectMaterialsScreen(entry: s)),
+                            CupertinoPageRoute(builder: (_) => SubjectMaterialsScreen(entry: s)),
                           );
                       },
                       child: Container(
@@ -238,7 +239,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                 child: Row(
                   children: [
                     ChoiceChip(
-                      label: const Text('All', style: TextStyle(color: Colors.white)),
+                      label: const Text('All', style: TextStyle(color: Color.fromARGB(255, 7, 7, 7))),
                       selected: _selectedSem == null,
                       selectedColor: defaultGreen,
                       backgroundColor: Colors.grey[900],
@@ -350,7 +351,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
                                 onTap: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => SubjectMaterialsScreen(entry: s)),
+                                    CupertinoPageRoute(builder: (_) => SubjectMaterialsScreen(entry: s)),
                                   );
                                 },
                                 child: Container(

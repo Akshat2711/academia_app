@@ -163,7 +163,7 @@ class SubjectMaterialsScreen extends StatelessWidget {
                               ),
                               child: Icon(
                                 _iconMap[label] ?? Icons.folder,
-                                color: sectionColor,
+                                color: const Color.fromARGB(255, 228, 221, 221),
                                 size: 20,
                               ),
                             ),
@@ -171,7 +171,7 @@ class SubjectMaterialsScreen extends StatelessWidget {
                             Text(
                               label.toUpperCase(),
                               style: TextStyle(
-                                color: sectionColor,
+                                color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.8,
                                 fontSize: 13,
@@ -192,7 +192,7 @@ class SubjectMaterialsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildValueWidget(BuildContext ctx, dynamic value, Color accentColor) {
+Widget _buildValueWidget(BuildContext ctx, dynamic value, Color accentColor) {
     
     // Helper to build a clickable link row
     Widget buildLinkRow(String title, String link) {
@@ -200,25 +200,29 @@ class SubjectMaterialsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: InkWell(
           onTap: () => _openLink(ctx, link),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12), // Slightly more rounded
           child: Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12), // Increased padding slightly
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(8),
+              // CHANGE 1: BG is now the section color (accentColor) with opacity
+              color: accentColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+              // Optional: Add a subtle border to make the color pop nicely
+              border: Border.all(color: accentColor.withOpacity(0.3), width: 1),
             ),
             child: Row(
               children: [
-                Icon(Icons.link, color: accentColor, size: 18),
-                const SizedBox(width: 10),
+                // Icon keeps the accent color to maintain the theme, or use White if you prefer
+                Icon(Icons.link, color: accentColor, size: 20),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(
-                      color: accentColor.withOpacity(0.9), // Text matches sem color
+                    style: const TextStyle(
+                      // CHANGE 2: Text is now White
+                      color: Colors.white, 
                       fontWeight: FontWeight.w500,
-                      decoration: TextDecoration.underline,
-                      decorationColor: accentColor.withOpacity(0.3),
+                      fontSize: 14,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -227,7 +231,8 @@ class SubjectMaterialsScreen extends StatelessWidget {
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  icon: Icon(Icons.copy, color: Colors.white24, size: 16),
+                  // Copy icon is white to match text
+                  icon: const Icon(Icons.copy, color: Colors.white70, size: 18),
                   onPressed: () => _copyLink(ctx, link),
                 ),
               ],

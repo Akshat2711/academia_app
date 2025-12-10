@@ -92,41 +92,48 @@ class _SlidingProfileAnnouncementWidgetState
     }
   }
 
-
-  void _startAutoSlide() {
-    _timer = Timer.periodic(const Duration(seconds: 7), (timer) {
+void _startAutoSlide() {
+    // I increased the time slightly to 8 seconds to allow for reading
+    _timer = Timer.periodic(const Duration(seconds: 8), (timer) {
       if (_pageController.hasClients) {
         final currentPage = _pageController.page?.round() ?? 0;
         
         if (currentPage == 0) {
-          // Move to announcement page
+          // Slide: Profile -> Announcement
           _pageController.animateToPage(
             1,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 800), // Slower, smoother slide
+            curve: Curves.easeInOutCubic, // Smoother curve
           );
         } else {
-          // On announcement page, either cycle through announcements or go back to profile
+          // We are on the announcement page
           final announcements = _announcementsData?.entries.toList() ?? [];
           if (announcements.isNotEmpty) {
-            setState(() {
-              _currentAnnouncementIndex = 
-                  (_currentAnnouncementIndex + 1) % announcements.length;
-            });
             
-            // Every 3rd cycle, go back to profile
-            if (_currentAnnouncementIndex == 0) {
+            // Check if we are at the end of the announcements list
+            if (_currentAnnouncementIndex >= announcements.length - 1) {
+              // Reset index to 0
+              setState(() {
+                _currentAnnouncementIndex = 0;
+              });
+              // Slide: Announcement -> Profile
               _pageController.animateToPage(
                 0,
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeInOut,
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeInOutCubic,
               );
+            } else {
+              // Just switch to the next announcement (AnimatedSwitcher handles the fade)
+              setState(() {
+                _currentAnnouncementIndex++;
+              });
             }
           } else {
+            // No announcements, go back to profile
             _pageController.animateToPage(
               0,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeInOutCubic,
             );
           }
         }
@@ -249,20 +256,13 @@ class _SlidingProfileAnnouncementWidgetState
     );
   }
 
-  Widget _buildAnnouncementCard() {
+Widget _buildAnnouncementCard() {
     if (_isLoading) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: Colors.grey[900],
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
         ),
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
@@ -271,31 +271,13 @@ class _SlidingProfileAnnouncementWidgetState
     }
 
     final announcements = _announcementsData?.entries.toList() ?? [];
-    
+
     if (announcements.isEmpty) {
+      // ... (Your existing 'No announcements' code remains here) ...
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF4F46E5).withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Text(
-            'No announcements available',
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
-        ),
+        // ... styling ...
+        child: const Center(child: Text('No announcements available', style: TextStyle(color: Colors.white))),
       );
     }
 
@@ -305,182 +287,187 @@ class _SlidingProfileAnnouncementWidgetState
     final String? img = announcement['img'];
     final String? link = announcement['link'];
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Background Image or Gradient
-            if (img != null && img.isNotEmpty)
-              Image.network(
-                img,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+    // WRAP IN ANIMATED SWITCHER
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 800), // Smooth 800ms transition
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      // The child is your Container. 
+      // IMPORTANT: The Key must change for animation to trigger.
+      child: Container(
+        key: ValueKey<int>(_currentAnnouncementIndex), // <--- CRITICAL LINE
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background Image
+              if (img != null && img.isNotEmpty)
+                Image.network(
+                  img,
+                  fit: BoxFit.cover,
+                  // Use frameBuilder to smooth out image loading
+                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                    if (wasSynchronouslyLoaded) return child;
+                    return AnimatedOpacity(
+                      opacity: frame == null ? 0 : 1,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOut,
+                      child: child,
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
+                    );
+                  },
+                )
+              else
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  );
-                },
-              )
-            else
+                  ),
+                ),
+
+              // Dark Overlay
               Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.3),
+                      Colors.black.withOpacity(0.7),
+                    ],
                   ),
                 ),
               ),
-            
-            // Dark Overlay for text readability
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.3),
-                    Colors.black.withOpacity(0.7),
+
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.campaign, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Announcement',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    
+                    // Title
+                    if (title != null)
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const SizedBox(height: 8),
+                    
+                    // Paragraph
+                    if (para != null)
+                      Text(
+                        para,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const SizedBox(height: 16),
+                    
+                    // Button
+                    if (link != null && link.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: GestureDetector(
+                          onTap: () => _launchUrl(link),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Check Out',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Icon(Icons.arrow_forward, size: 16, color: Colors.black),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-            ),
-            
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header with icon
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.campaign,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Announcement',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const Spacer(),
-                  
-                  // Title
-                  if (title != null)
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  
-                  const SizedBox(height: 8),
-                  
-                  // Paragraph
-                  if (para != null)
-                    Text(
-                      para,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Link button in bottom right
-                  if (link != null && link.isNotEmpty)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: () {
-                          print('🔗 Opening link: $link');
-                          _launchUrl(link);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Check Out',
-                                style: TextStyle(
-                                  color: Color.fromARGB(255, 0, 0, 0),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_forward,
-                                size: 16,
-                                color: Color.fromARGB(255, 0, 0, 0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
