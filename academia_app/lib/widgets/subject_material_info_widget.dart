@@ -49,16 +49,35 @@ class SubjectMaterialsScreen extends StatelessWidget {
   // --- HELPER: Get Dynamic Color based on Semester ---
   Color _getSemColor(String sem) {
     final s = sem.toLowerCase().replaceAll(' ', '');
-    if (s.contains('sem1')) return const Color(0xFFFF5252); // Red Accent
-    if (s.contains('sem2')) return const Color(0xFF448AFF); // Blue Accent
-    if (s.contains('sem3')) return const Color(0xFFE040FB); // Purple Accent
-    if (s.contains('sem4')) return const Color(0xFF69F0AE); // Green Accent
-    if (s.contains('sem5')) return const Color(0xFFFFAB40); // Orange Accent
-    if (s.contains('sem6')) return const Color(0xFFFF4081); // Pink Accent
-    if (s.contains('sem7')) return const Color(0xFF18FFFF); // Cyan Accent
-    if (s.contains('sem8')) return const Color(0xFF536DFE); // Indigo Accent
-    return const Color(0xFF00C853); // Default Green
+
+    if (s.contains('sem1') || s.contains('1')) {
+      return Colors.orange; // Sem 1
+    }
+    if (s.contains('sem2') || s.contains('2')) {
+      return const Color(0xFF61A5DD); // Sem 2
+    }
+    if (s.contains('sem3') || s.contains('3')) {
+      return const Color(0xFFE040FB); // Sem 3
+    }
+    if (s.contains('sem4') || s.contains('4')) {
+      return const Color(0xFF9DF8A0); // Sem 4
+    }
+    if (s.contains('sem5') || s.contains('5')) {
+      return const Color(0xFFFD3974); // Sem 5
+    }
+    if (s.contains('sem6') || s.contains('6')) {
+      return const Color(0xFF18FFFF); // Sem 6 (blue accent)
+    }
+    if (s.contains('sem7') || s.contains('7')) {
+      return const Color(0xFF448AFF); // Sem 7 (cyan accent)
+    }
+    if (s.contains('sem8') || s.contains('8')) {
+      return const Color(0xFF536DFE); // Sem 8 (indigo)
+    }
+
+    return Colors.cyanAccent; // fallback
   }
+
 
   Future<void> _openLink(BuildContext ctx, String url) async {
     final uri = Uri.tryParse(url);
@@ -73,124 +92,162 @@ class SubjectMaterialsScreen extends StatelessWidget {
     ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Link copied')));
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final Map<String, dynamic> doc = entry.data;
-    
-    // 1. Determine the Global Theme Color for this specific subject/semester
-    final Color semThemeColor = _getSemColor(entry.sem);
+@override
+Widget build(BuildContext context) {
+  final Map<String, dynamic> doc = entry.data;
 
-    final Map<String, String> lowerKeyMap = {for (final k in doc.keys) k.toLowerCase(): k};
+  // 1. Determine the Global Theme Color for this specific subject/semester
+  final Color semThemeColor = _getSemColor(entry.sem);
 
-    final List<MapEntry<String, dynamic>> rows = [];
-    for (final variant in fieldVariants) {
-      final displayLabel = variant[0];
-      final possibleKeys = variant.sublist(1).map((s) => s.toLowerCase()).toList();
-      String? matched;
-      for (final pk in possibleKeys) {
-        if (lowerKeyMap.containsKey(pk)) {
-          matched = lowerKeyMap[pk];
-          break;
-        }
-      }
-      if (matched != null) {
-        final value = doc[matched];
-        // Filter out empty values
-        if (value != null && value.toString().isNotEmpty) {
-           if (value is List && value.isEmpty) continue;
-           rows.add(MapEntry(displayLabel, value));
-        }
+  final Map<String, String> lowerKeyMap = {
+    for (final k in doc.keys) k.toLowerCase(): k
+  };
+
+  final List<MapEntry<String, dynamic>> rows = [];
+  for (final variant in fieldVariants) {
+    final displayLabel = variant[0];
+    final possibleKeys =
+        variant.sublist(1).map((s) => s.toLowerCase()).toList();
+    String? matched;
+    for (final pk in possibleKeys) {
+      if (lowerKeyMap.containsKey(pk)) {
+        matched = lowerKeyMap[pk];
+        break;
       }
     }
+    if (matched != null) {
+      final value = doc[matched];
+      if (value != null && value.toString().isNotEmpty) {
+        if (value is List && value.isEmpty) continue;
+        rows.add(MapEntry(displayLabel, value));
+      }
+    }
+  }
 
-    return Scaffold(
-      backgroundColor: bg,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        title: Text(
-          entry.displayName,
-          style: TextStyle(color: Colors.white),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+  return Scaffold(
+    backgroundColor: bg,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      elevation: 0,
+      title: Text(
+        entry.displayName,
+        style: const TextStyle(color: Colors.white),
       ),
-      body: rows.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.folder_off_outlined, color: Colors.white12, size: 64),
-                  const SizedBox(height: 16),
-                  Text('No materials available', style: TextStyle(color: textMuted)),
-                ],
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: rows.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, i) {
-                final label = rows[i].key;
-                final value = rows[i].value;
-                final bool isPlaylist = label.toLowerCase() == 'playlist';
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+    ),
+    body: rows.isEmpty
+        ? Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.folder_off_outlined,
+                  color: Colors.white12,
+                  size: 64,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No materials available',
+                  style: TextStyle(color: textMuted),
+                ),
+              ],
+            ),
+          )
+        : Column(
+            children: [
+              // -------- MAIN CONTENT --------
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: rows.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  itemBuilder: (context, i) {
+                    final label = rows[i].key;
+                    final value = rows[i].value;
+                    final bool isPlaylist =
+                        label.toLowerCase() == 'playlist';
 
-                // 2. Logic: If it's a playlist, use Red. Otherwise, use the Semester Color.
-                final Color sectionColor = isPlaylist ? playlistRed : semThemeColor;
+                    // Playlist → red, otherwise semester theme
+                    final Color sectionColor =
+                        isPlaylist ? playlistRed : semThemeColor;
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(16),
-                
-              
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // --- HEADER ROW ---
-                        Row(
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: sectionColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                _iconMap[label] ?? Icons.folder,
-                                color: const Color.fromARGB(255, 228, 221, 221),
-                                size: 20,
-                              ),
+                            // ---------- HEADER ----------
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        sectionColor.withOpacity(0.1),
+                                    borderRadius:
+                                        BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    _iconMap[label] ?? Icons.folder,
+                                    color: const Color.fromARGB(
+                                        255, 228, 221, 221),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  label.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              label.toUpperCase(),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.8,
-                                fontSize: 13,
-                              ),
+                            const SizedBox(height: 12),
+
+                            // ---------- CONTENT ----------
+                            _buildValueWidget(
+                              context,
+                              value,
+                              sectionColor,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        // --- CONTENT ---
-                        // We pass the sectionColor down so links match the header
-                        _buildValueWidget(context, value, sectionColor),
-                      ],
-                    ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // -------- SUBTLE FOOTER CREDIT --------
+              Padding(
+                padding:
+                    const EdgeInsets.only(bottom: 6, top: 4),
+                child: Text(
+                  'Some materials are sourced from Studique',
+                  style: TextStyle(
+                    color: textMuted.withOpacity(0.6),
+                    fontSize: 11,
+                    letterSpacing: 0.2,
                   ),
-                );
-              },
-            ),
-    );
-  }
+                ),
+              ),
+            ],
+          ),
+  );
+}
+
 
 Widget _buildValueWidget(BuildContext ctx, dynamic value, Color accentColor) {
     

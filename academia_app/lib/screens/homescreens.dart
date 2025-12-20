@@ -1,27 +1,25 @@
 import 'dart:convert';
-import 'package:academia_app/screens/cgpa_calculator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../components/subject_info.dart';
 import '../components/faculty_info.dart';
 import '../screens/login_page.dart';
-import 'calender_screen.dart';
-import '../screens/annoucement_screen.dart';
-import '../screens/imp_links_screen.dart';
-import '../screens/studymaterial_screen.dart';
+
 
 //profile card
 import '../widgets/profile_card_widget.dart';
-
-//FOR IOS LIKE TRANSITION
-import 'package:flutter/cupertino.dart'; 
 
 //FOR BACKUP DAYORDER
 import '../utils/day_order_backup.dart';
 
 //for loading animation
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
+
+//stats bar component
+import '../components/stats_bar.dart';
+//quick actions component
+import '../components/quick_actions.dart';
 
 
 // ============================================================================
@@ -437,11 +435,16 @@ SliverPadding(
       const SizedBox(height: 16),
 
       // Stats Grid
-      _buildStatsGrid(),
+      StatsBar(
+        overallAttendance: _overallAttendance,
+        courseCount: _courseCount,
+        totalCredits: _totalCredits,
+        primaryColor: _primaryColor,
+      ),
       const SizedBox(height: 16),
 
       // Quick Actions
-      _buildQuickActions(),
+      QuickActions(primaryColor: _primaryColor),
 
       // Courses Section
       if (_courses.isNotEmpty) ...[
@@ -472,196 +475,4 @@ SliverPadding(
   }
 
 
-
-
-
-
-
-
- 
-
-  Widget _buildStatsGrid() {
-    final attendance = _overallAttendance;
-    final courses = _courseCount > 0 ? _courseCount.toString() : '—';
-    final credits = _totalCredits > 0 ? _totalCredits.toString() : '—';
-    return TweenAnimationBuilder(
-      duration: const Duration(milliseconds: 600),
-      tween: Tween<double>(begin: 0, end: 1),
-      builder: (context, double value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: Row(
-        children: [
-          // Keeping original colors for differentiation, but adjusting 'Credits' to primary color
-          Expanded(child: _buildStatCard(attendance.toStringAsFixed(2), 'Attendance', Colors.greenAccent[400]!)), 
-          const SizedBox(width: 12),
-          Expanded(child: _buildStatCard(courses, 'Courses', Colors.cyanAccent[400]!)),
-          const SizedBox(width: 12),
-          Expanded(child: _buildStatCard(credits, 'Credits', _primaryColor)), // Orange for Credits
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String value, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1C), // Dark grey for contrast on black background
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color, // Use accent color
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Colors.white70), // White/light text
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white, // White text for section title
-          ),
-        ),
-        const SizedBox(height: 10),
-        _buildActionButton(
-          Icons.menu_book_sharp,
-          'Study Material',
-          _primaryColor,
-          onTap: () {
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (_) => const MaterialsScreen()),
-            );
-          },
-        ), // orange
-        const SizedBox(height: 8),
-        _buildActionButton(Icons.announcement_outlined, 'Announcement', _primaryColor,
-         onTap: () {
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (_) => const AnnouncementScreen()),
-            );
-          },
-        ), // Orange
-        const SizedBox(height: 8),
-        _buildActionButton(
-          Icons.calendar_month,
-          'Calender',
-          _primaryColor,
-          onTap: () {
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (_) => const CalendarScreen()),
-            );
-          },
-        ), // orange
-        const SizedBox(height: 8),
-        _buildActionButton(
-          Icons.link_sharp, 'Important Links', _primaryColor,
-          onTap: () {
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (_) => const LinksScreen()),
-            );
-          },
-        ), // Orange
-                const SizedBox(height: 8),
-        _buildActionButton(
-          Icons.calculate_outlined, 'Calculator', _primaryColor,
-          onTap: () {
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (_) => const CGPACalculator()),
-            );
-          },
-        ), // Orange
-      ],
-    );
-  }
-
-  Widget _buildActionButton(IconData icon, String text, Color color, {VoidCallback? onTap}) {
-    // Choose a contrasting color for the icon container based on the action color
-    final iconContainerColor = color == Colors.white ? _primaryColor.withOpacity(0.1) : _primaryColor.withOpacity(0.2);
-    final iconColor = color == Colors.white ? Colors.white : color;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1C), // Dark grey for contrast on black background
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-        child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap ?? () {},
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: iconContainerColor,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 22),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-                const Spacer(),
-                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white54),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

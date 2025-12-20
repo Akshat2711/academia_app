@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/responsive_helper.dart';
 import '../utils/day_order_backup.dart'; // Import the day order manager
+import 'package:lottie/lottie.dart';
+
 
 class CLoginPage extends StatefulWidget {
   const CLoginPage({super.key});
@@ -130,8 +132,17 @@ class _CLoginPageState extends State<CLoginPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Login Image at Top
-              Image.asset("assets/login_img.png"),
-              SizedBox(height: res.height(4)),
+              SizedBox(
+                height: res.height(32),
+                child: Lottie.asset(
+                  'assets/login_animation.json',
+                  repeat: true,
+                  animate: true,
+                  fit: BoxFit.contain,
+                ),
+              ),
+
+              SizedBox(height: res.height(10)),
 
               // Welcome Text
               Text(
@@ -150,7 +161,7 @@ class _CLoginPageState extends State<CLoginPage> {
                 style: TextStyle(
                   fontSize: res.fontSize(7),
                   fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 30, 70, 162),
+                  color: const Color.fromARGB(255, 255, 136, 67),
                   letterSpacing: -0.5,
                 ),
               ),
@@ -174,7 +185,7 @@ class _CLoginPageState extends State<CLoginPage> {
                 keyboardType: TextInputType.emailAddress,
                 res: res,
               ),
-              SizedBox(height: res.height(2.5)),
+              SizedBox(height: res.height(2)),
 
               // Password Field
               _buildTextField(
@@ -190,22 +201,30 @@ class _CLoginPageState extends State<CLoginPage> {
                 },
                 res: res,
               ),
-              SizedBox(height: res.height(4)),
+              SizedBox(height: res.height(3)),
 
               // Login Button
               _buildLoginButton(res),
               SizedBox(height: res.height(3)),
 
-              // Footer
-              Center(
+            // Footer
+           Center(
+              child: InkWell(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => DashboardScreen()),
+                  );
+                },
                 child: Text(
-                  'Secure authentication',
+                  'Continue without Login',
                   style: TextStyle(
-                    color: Colors.grey[700],
+                    color: const Color.fromARGB(255, 218, 143, 103),
                     fontSize: res.fontSize(3.2),
                   ),
                 ),
               ),
+            ),
             ],
           ),
         ),

@@ -1,12 +1,10 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import for local storage
+import 'package:flutter/cupertino.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// service import
+// Service & Widget Imports
 import '../services/study_material.dart';
-
-// widgets
-import '../widgets/subject_material_info_widget.dart'; // SubjectEntry & SubjectMaterialsScreen
+import '../widgets/subject_material_info_widget.dart';
 
 class MaterialsScreen extends StatefulWidget {
   const MaterialsScreen({super.key});
@@ -18,60 +16,49 @@ class MaterialsScreen extends StatefulWidget {
 class _MaterialsScreenState extends State<MaterialsScreen> {
   bool _loading = true;
   String _query = '';
-
   Map<String, Map<String, dynamic>> _materials = {};
   List<SubjectEntry> _subjects = [];
   List<SubjectEntry> _filtered = [];
-
-  // Changed to Set for efficient lookups, stored locally
   Set<String> _mySubjectIds = {};
-
-  // Semester selection: null => All, otherwise sem key like 'sem1'
   String? _selectedSem;
 
   @override
   void initState() {
     super.initState();
-    _loadPreferences(); // Load saved subjects first
-    _load(); // Load API/Service data
+    _loadPreferences();
+    _load();
   }
 
-  // --- LOCAL STORAGE LOGIC ---
+  // --- LOGIC ---
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      // Load list and convert to Set
       final List<String>? saved = prefs.getStringList('my_subjects');
-      if (saved != null) {
-        _mySubjectIds = saved.toSet();
-      }
+      if (saved != null) _mySubjectIds = saved.toSet();
     });
   }
 
   Future<void> _toggleMySubject(String id) async {
     setState(() {
       if (_mySubjectIds.contains(id)) {
-        _mySubjectIds.remove(id); // Remove if exists (Cross button logic)
+        _mySubjectIds.remove(id);
       } else {
-        _mySubjectIds.add(id); // Add if doesn't exist (Plus button logic)
+        _mySubjectIds.add(id);
       }
     });
-
-    // Save to local storage immediately
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('my_subjects', _mySubjectIds.toList());
   }
-  // ---------------------------
 
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final data = await getMaterialsData(); // your service
+      final data = await getMaterialsData();
       _materials = data;
       _subjects = _flatten(data);
       _applyFilter();
     } catch (e) {
-      debugPrint('Error loading materials: $e');
+      debugPrint('Error: $e');
     } finally {
       setState(() => _loading = false);
     }
@@ -108,7 +95,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
         final matchesSem = _selectedSem == null ? true : s.sem == _selectedSem;
         final matchesQuery = q.isEmpty
             ? true
-            : (s.displayName.toLowerCase().contains(q) || s.sem.toLowerCase().contains(q));
+            : (s.displayName.toLowerCase().contains(q) || s.id.toLowerCase().contains(q));
         return matchesSem && matchesQuery;
       }).toList();
     });
@@ -125,24 +112,19 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
   }
 
   Color _getSemColor(String semKey) {
-    final key = semKey.toLowerCase().replaceAll(' ', '');
-    if (key.contains('sem1')) return const Color(0xFFFF5252);
-    if (key.contains('sem2')) return const Color(0xFF448AFF);
-    if (key.contains('sem3')) return const Color(0xFFE040FB);
-    if (key.contains('sem4')) return const Color(0xFF69F0AE);
-    if (key.contains('sem5')) return const Color(0xFFFFAB40);
-    if (key.contains('sem6')) return const Color(0xFFFF4081);
-    if (key.contains('sem7')) return const Color(0xFF18FFFF);
-    if (key.contains('sem8')) return const Color(0xFF536DFE);
-    return const Color(0xFF00C853);
+    final key = semKey.toLowerCase();
+    if (key.contains('1')) return Colors.orange;
+    if (key.contains('2')) return const Color(0xFF61A5DD);
+    if (key.contains('3')) return const Color(0xFFE040FB);
+    if (key.contains('4')) return const Color(0xFF9DF8A0);
+    if (key.contains('5')) return const Color(0xFFFD3974);
+    return Colors.cyanAccent;
   }
+
+  // --- UI COMPONENTS ---
 
   @override
   Widget build(BuildContext context) {
-    final defaultGreen = const Color(0xFF00C853);
-    final cardRadius = 12.0;
-
-    // Filter actual subject objects based on the stored IDs
     final mySubjectsList = _subjects.where((s) => _mySubjectIds.contains(s.id)).toList();
 
     return Scaffold(
@@ -150,295 +132,239 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        title: const Text("Study Material", style: TextStyle(color: Colors.white)),
+        centerTitle: false,
+        title: const Text("Study Material", 
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            
-            // --- SECTION 1: MY SUBJECTS (Only visible if not empty) ---
-            if (mySubjectsList.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 5),
-                child: Row(
-                  children: const [
-                    Icon(Icons.bookmark, color: Colors.white, size: 18),
-                    SizedBox(width: 8),
-                    Text("My Subjects", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  ],
+      body: Column(
+        children: [
+          _buildSearchBar(),
+          _buildSemesterFilters(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              children: [
+                if (mySubjectsList.isNotEmpty && _selectedSem == null && _query.isEmpty) 
+                  _buildPinnedSection(mySubjectsList),
+                
+                _buildMainListHeader(),
+                _buildMainList(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 15),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF121212),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: TextField(
+          style: const TextStyle(color: Colors.white),
+          onChanged: (v) {
+            _query = v;
+            _applyFilter();
+          },
+          decoration: InputDecoration(
+            hintText: 'Search subjects or codes...',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+            prefixIcon: Icon(Icons.search_rounded, color: Colors.white.withOpacity(0.3)),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSemesterFilters() {
+    return Container(
+      height: 45,
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: _semesterKeys.length + 1,
+        itemBuilder: (context, index) {
+          final isAll = index == 0;
+          final sem = isAll ? null : _semesterKeys[index - 1];
+          final isSelected = _selectedSem == sem;
+          final color = isAll ? Colors.greenAccent : _getSemColor(sem!);
+
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedSem = sem);
+              _applyFilter();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: isSelected ? color.withOpacity(0.2) : const Color(0xFF121212),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: isSelected ? color : Colors.transparent,
+                  width: 1,
                 ),
               ),
-              SizedBox(
-                height: 110, 
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: mySubjectsList.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (context, i) {
-                    final s = mySubjectsList[i];
-                    final color = _getSemColor(s.sem);
-                    return GestureDetector(
-                      onTap: () {
-                         Navigator.push(
-                            context,
-                            CupertinoPageRoute(builder: (_) => SubjectMaterialsScreen(entry: s)),
-                          );
-                      },
-                      child: Container(
-                        width: 180,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[900],
-                          borderRadius: BorderRadius.circular(cardRadius),
-                          border: Border.all(color: color.withOpacity(0.3)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              alignment: Alignment.center,
+              child: Text(
+                isAll ? "All" : sem!.toUpperCase(),
+                style: TextStyle(
+                  color: isSelected ? color : Colors.white54,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPinnedSection(List<SubjectEntry> pinned) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: Text("Pinned Subjects", 
+            style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
+        ),
+        SizedBox(
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            itemCount: pinned.length,
+            itemBuilder: (context, i) {
+              final s = pinned[i];
+              final color = _getSemColor(s.sem);
+              return Container(
+                width: 160,
+                margin: const EdgeInsets.only(right: 12, bottom: 10, top: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF121212),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8)],
+                ),
+                child: InkWell(
+                  onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => SubjectMaterialsScreen(entry: s))),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                CircleAvatar(radius: 4, backgroundColor: color),
-                                const SizedBox(width: 6),
-                                Text(s.sem.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
-                                const Spacer(),
-                                // --- CROSS BUTTON (Deletes from storage) ---
-                                InkWell(
-                                  onTap: () => _toggleMySubject(s.id),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: const Icon(Icons.close, color: Colors.white38, size: 18),
-                                )
-                              ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(5)),
+                              child: Text(s.sem.toUpperCase(), style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold)),
                             ),
-                            Text(
-                              s.displayName,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-                            ),
+                            GestureDetector(
+                              onTap: () => _toggleMySubject(s.id),
+                              child: const Icon(Icons.close_rounded, color: Colors.white24, size: 16),
+                            )
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const Divider(color: Colors.white10, height: 20),
-            ],
-
-            // --- SECTION 2: FILTERS & SEARCH ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    ChoiceChip(
-                      label: const Text('All', style: TextStyle(color: Color.fromARGB(255, 7, 7, 7))),
-                      selected: _selectedSem == null,
-                      selectedColor: defaultGreen,
-                      backgroundColor: Colors.grey[900],
-                      onSelected: (_) {
-                        _selectedSem = null;
-                        _applyFilter();
-                      },
-                      side: BorderSide.none,
+                        const Spacer(),
+                        Text(s.displayName, maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    ..._semesterKeys.map((sem) {
-                      final label = sem.toUpperCase();
-                      final semColor = _getSemColor(sem);
-
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(label, style: TextStyle(color: _selectedSem == sem ? Colors.black : Colors.white)),
-                          selected: _selectedSem == sem,
-                          selectedColor: semColor,
-                          backgroundColor: Colors.grey[900],
-                          onSelected: (_) {
-                            _selectedSem = sem;
-                            _applyFilter();
-                          },
-                          side: BorderSide.none,
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ),
-            ),
-
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade800),
-                ),
-                child: TextField(
-                  style: const TextStyle(color: Colors.white),
-                  onChanged: (v) {
-                    _query = v;
-                    _applyFilter();
-                  },
-                  decoration: const InputDecoration(
-                    hintText: 'Search subjects...',
-                    hintStyle: TextStyle(color: Colors.white70),
-                    prefixIcon: Icon(Icons.search, color: Colors.white70),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
-            // Count info
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  Widget _buildMainListHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(_selectedSem == null ? "All Subjects" : "Semester ${_selectedSem!.replaceAll(RegExp(r'\D'), '')}",
+              style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
+          Text("${_filtered.length} items", style: const TextStyle(color: Colors.white24, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainList() {
+    if (_loading) return const Center(child: Padding(padding: EdgeInsets.only(top: 50), child: CircularProgressIndicator(color: Colors.orange)));
+    if (_filtered.isEmpty) return const Center(child: Padding(padding: EdgeInsets.only(top: 50), child: Text("No subjects found", style: TextStyle(color: Colors.white24))));
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _filtered.length,
+      itemBuilder: (context, i) {
+        final s = _filtered[i];
+        final color = _getSemColor(s.sem);
+        final isAdded = _mySubjectIds.contains(s.id);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF121212),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: InkWell(
+            onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => SubjectMaterialsScreen(entry: s))),
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  Text(
-                    _selectedSem == null ? 'Showing all subjects' : 'Showing ${_selectedSem!.toUpperCase()}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  Container(
+                    height: 45, width: 45,
+                    decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Icons.book_rounded, color: color, size: 22),
                   ),
-                  const Spacer(),
-                  if (!_loading)
-                    Text(
-                      '${_filtered.length} subjects',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(s.displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(s.id, style: const TextStyle(color: Colors.white24, fontSize: 12)),
+                      ],
                     ),
+                  ),
+                  IconButton(
+                    onPressed: () => _toggleMySubject(s.id),
+                    icon: Icon(isAdded ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                      color: isAdded ? color : Colors.white24),
+                  ),
                 ],
               ),
             ),
-
-            // --- SECTION 3: MAIN LIST ---
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
-                  : _filtered.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.folder_open, color: Colors.white24, size: 56),
-                              SizedBox(height: 12),
-                              Text('No subjects found', style: TextStyle(color: Colors.white24)),
-                            ],
-                          ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(12, 6, 12, 18),
-                          itemCount: _filtered.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (context, i) {
-                            final s = _filtered[i];
-                            final itemColor = _getSemColor(s.sem);
-                            final isAdded = _mySubjectIds.contains(s.id);
-
-                            return Material(
-                              color: Colors.grey[900],
-                              borderRadius: BorderRadius.circular(cardRadius),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(cardRadius),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(builder: (_) => SubjectMaterialsScreen(entry: s)),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                  child: Row(
-                                    children: [
-                                      // Left avatar
-                                      Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: itemColor,
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            s.displayName.isNotEmpty ? s.displayName[0].toUpperCase() : '?',
-                                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      // Title + details
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              s.displayName,
-                                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.black,
-                                                    borderRadius: BorderRadius.circular(8),
-                                                    border: Border.all(color: Colors.white10),
-                                                  ),
-                                                  child: Text(
-                                                    s.sem.toUpperCase(),
-                                                    style: TextStyle(
-                                                      color: itemColor.withOpacity(0.8),
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    s.id,
-                                                    style: const TextStyle(color: Colors.white38, fontSize: 12),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      
-                                      // --- ADD BUTTON (Toggles storage) ---
-                                      IconButton(
-                                        onPressed: () => _toggleMySubject(s.id),
-                                        icon: Icon(
-                                          isAdded ? Icons.check_circle : Icons.add_circle_outline,
-                                          color: isAdded ? defaultGreen : Colors.white54,
-                                        ),
-                                      ),
-                                      
-                                      // Chevron
-                                      const Icon(Icons.chevron_right, color: Colors.white54),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

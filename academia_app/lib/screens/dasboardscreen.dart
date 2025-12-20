@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
-
-// Custom imports
 import 'attendancescreen.dart';
 import 'homescreens.dart';
 import 'marksscreen.dart';
 import 'timetablescreen.dart';
 
-//debug screen
-/* import '../debug/debug_screen.dart'; */
-
-// ============================================================================
-// DASHBOARD SCREEN - Main navigation container
-// ============================================================================
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -22,7 +14,6 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
   
-  // Keys to force rebuild of screens when data is refreshed
   Key _attendanceKey = UniqueKey();
   Key _marksKey = UniqueKey();
   Key _timetableKey = UniqueKey();
@@ -31,7 +22,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return [
       HomeScreen(
         onDataRefreshed: () {
-          // When HomeScreen refreshes data, rebuild other screens
           setState(() {
             _attendanceKey = UniqueKey();
             _marksKey = UniqueKey();
@@ -46,18 +36,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Content flows behind the nav bar
       body: IndexedStack(
         index: _currentIndex,
         children: _buildScreens(),
       ),
-////////debug screen///////////////////////////////////////////////////////
+      bottomNavigationBar: _buildFloatingNavBar(),
+      ////////debug screen///////////////////////////////////////////////////////
 /*       floatingActionButton: FloatingActionButton(
       backgroundColor: Colors.red,
       child: const Icon(Icons.bug_report),
@@ -71,47 +58,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
       },
     ), */
 /////////////////////////////////////////////////////////////////////////////
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              
-              blurRadius: 10,
-              offset: const Offset(0, -4),
-            ),
-          ],
+    );
+  }
+
+  Widget _buildFloatingNavBar() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 15), // Floating margins
+        child: Container(
+          height: 65,
+          decoration: BoxDecoration(
+            color: const Color(0xFF121212), // Solid dark matte
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.4),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _navItem(Icons.home_rounded, 0, Colors.orange),
+              _navItem(Icons.how_to_reg_rounded, 1, const Color(0xFF61A5DD)),
+              _navItem(Icons.bar_chart_rounded, 2, const Color(0xFF9DF8A0)),
+              _navItem(Icons.schedule_rounded, 3, const Color(0xFFFD3974)),
+            ],
+          ),
         ),
-        child: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (index) {
-            setState(() => _currentIndex = index);
+      ),
+    );
+  }
+
+  Widget _navItem(IconData icon, int index, Color activeColor) {
+    bool isSelected = _currentIndex == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: TweenAnimationBuilder<Color?>(
+          duration: const Duration(milliseconds: 300),
+          tween: ColorTween(
+            begin: Colors.white24,
+            end: isSelected ? activeColor : Colors.white24,
+          ),
+          builder: (context, color, child) {
+            return Icon(
+              icon,
+              color: color,
+              size: 26, // Size remains strictly identical
+            );
           },
-          elevation: 0,
-          backgroundColor: Colors.black, // 🖤 Black background
-          indicatorColor: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.2), 
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined, color: Colors.white),
-              selectedIcon: Icon(Icons.home, color: Colors.orange),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.calendar_today_outlined, color: Colors.white),
-              selectedIcon: Icon(Icons.calendar_today, color: Color.fromARGB(255, 97, 165, 221)),
-              label: 'Attendance',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.grade_outlined, color: Colors.white),
-              selectedIcon: Icon(Icons.grade, color: Color.fromARGB(255, 157, 248, 160)),
-              label: 'Marks',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.schedule_outlined, color: Colors.white),
-              selectedIcon: Icon(Icons.schedule, color: Color.fromARGB(255, 253, 57, 116)),
-              label: 'Timetable',
-            ),
-          ],
         ),
       ),
     );

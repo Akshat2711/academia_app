@@ -2,12 +2,6 @@ List<Map<String, String>> pass_imp_links() {
   return [
     // --- Official Links First ---
     {
-      "title": "SRMIST Events",
-      "desc": "Stay updated on university events, seminars, and workshops.",
-      "url": "https://www.srmist.edu.in/events/",
-      "official": "yes"
-    },
-    {
       "title": "SRM Leave Application",
       "desc": "Submit and track staff and student leave applications.",
       "url": "http://10.1.105.62/srmleaveapp",
@@ -20,13 +14,32 @@ List<Map<String, String>> pass_imp_links() {
       "official": "yes"
     },
     {
+      "title": "SRMIST Events",
+      "desc": "Stay updated on university events, seminars, and workshops.",
+      "url": "https://www.srmist.edu.in/events/",
+      "official": "yes"
+    },
+    {
       "title": "SRM Staff Finder",
       "desc": "Search for faculty and staff contact details within SRMIST.",
       "url": "https://www.srmist.edu.in/staff-finder/",
       "official": "yes"
     },
+    {
+      "title": "SRMIST Academia",
+      "desc": "Track your attendance,marks and other important info here",
+      "url": "https://academia.srmist.edu.in/",
+      "official": "yes"
+    },
 
     // --- Non-Official Links ---
+    {
+      "title": "Console-X-Academia",
+      "desc": "Try out our platform directly from web",
+      "url": "https://console-x-academia.vercel.app/",
+      "official": "no"
+    },
+
     {
       "title": "The Helpers",
       "desc": "Access semesters study materials and resources",
