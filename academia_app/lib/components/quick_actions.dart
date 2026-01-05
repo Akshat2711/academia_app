@@ -49,10 +49,10 @@ class QuickActions extends StatelessWidget {
             ),
             _buildActionTile(
               context,
-              Icons.announcement_rounded,
-              'Announce-\nments',
+              Icons.link_rounded,
+              'Important\nLinks',
               const Color(0xFF61A5DD),
-              const AnnouncementScreen(),
+              const LinksScreen(),
             ),
             _buildActionTile(
               context,
@@ -73,10 +73,10 @@ class QuickActions extends StatelessWidget {
         const SizedBox(height: 12), // Controlled small gap
         _buildActionTile(
           context,
-          Icons.link_rounded,
-          'Important Links & Resources',
+          Icons.announcement_rounded,
+          'Announcements',
           primaryColor,
-          const LinksScreen(),
+          const AnnouncementScreen(),
           isFullWidth: true,
         ),
       ],

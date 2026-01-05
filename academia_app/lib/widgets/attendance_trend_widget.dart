@@ -253,200 +253,158 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
     }
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
-    // Determine the data to display (last 5 days)
     final displayData = _trendData.length > 5 
         ? _trendData.sublist(_trendData.length - 5)
         : _trendData;
 
-    Widget content;
-    
-    // Condition 1: No data
-    if (displayData.isEmpty) {
-      content = Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: Text(
-            'No trend data yet',
-            style: TextStyle(color: _white.withOpacity(0.4), fontSize: 12),
-          ),
-        ),
-      );
-    // Condition 2: Only one day of data
-    } else if (displayData.length == 1) {
-      content = Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: Text(
-            'Only one day data present: ${displayData.first.percentage.toStringAsFixed(1)}%',
-            style: TextStyle(color: _white.withOpacity(0.6), fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    // Condition 3: Two or more days of data (a trend)
-    } else {
-      content = _buildModernLineGraph(displayData);
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header with title and alert
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                'Last 5-Day Trend',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _white.withOpacity(0.9),
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
-            // Only show decline if there's a trend to compare
-            if (_hasDeclined && displayData.length > 1) 
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _deepBlue.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _deepBlue.withOpacity(0.3), width: 1),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.trending_down, size: 12, color: _deepBlue),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Declined',
-                      style: TextStyle(
-                        color: _deepBlue,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+        // 1. HEADER SECTION
+        _buildHeader(displayData),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
 
-        // Graph area
-        content,
+        // 2. CONDITIONAL CONTENT (The 3 Cases)
+        _buildContent(displayData),
       ],
     );
   }
 
-  Widget _buildModernLineGraph(List<AttendanceTrendData> displayData) {
-    // This function only runs if displayData.length >= 2
-
-    return Column(
+  Widget _buildHeader(List<AttendanceTrendData> displayData) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Modern Line Graph
-        Container(
-          height: 120,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                _navyBlue.withOpacity(0.05),
-                _lightNavy.withOpacity(0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        Row(
+          children: [
+            Icon(Icons.show_chart_rounded, size: 14, color: _white.withOpacity(0.3)),
+            const SizedBox(width: 8),
+            Text(
+              '5-DAY TREND',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: _white.withOpacity(0.3),
+                letterSpacing: 1.2,
+              ),
             ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _navyBlue.withOpacity(0.15),
-              width: 1,
+          ],
+        ),
+        if (_hasDeclined && displayData.length > 1) 
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Color.fromARGB(226, 234, 86, 83),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Text(
+              'DECLINING',
+              style: TextStyle(color: Color.fromARGB(225, 52, 49, 49), fontSize: 9, fontWeight: FontWeight.w900),
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildContent(List<AttendanceTrendData> displayData) {
+    // CASE 1: No data recorded yet
+    if (displayData.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text(
+            'No attendance history available yet',
+            style: TextStyle(color: _white.withOpacity(0.2), fontSize: 12),
+          ),
+        ),
+      );
+    }
+
+    // CASE 2: Only one data point (Cannot form a trend line)
+    if (displayData.length == 1) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _white.withOpacity(0.02),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: _skyBlue.withOpacity(0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.insights, color: _skyBlue, size: 16),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Initial point: ${displayData.first.percentage.toStringAsFixed(1)}% recorded on ${displayData.first.date}',
+                style: TextStyle(color: _white.withOpacity(0.5), fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // CASE 3: 2 or more points (Modern Graph)
+    return _buildModernGraphSection(displayData);
+  }
+
+  Widget _buildModernGraphSection(List<AttendanceTrendData> displayData) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 80,
+          width: double.infinity,
           child: CustomPaint(
             painter: _LineGraphPainter(
               data: displayData,
               lineColor: _skyBlue,
-              dotColor: _lightNavy,
-              gridColor: _white.withOpacity(0.05),
+              dotColor: _white,
+              targetLineColor: _white.withOpacity(0.1),
             ),
-            child: Container(),
           ),
         ),
+        const SizedBox(height: 16),
+        // X-Axis Date & % Labels
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: displayData.map((data) {
+            final date = DateTime.parse(data.date);
+            final dayName = DateFormat('EEE').format(date).toUpperCase();
+            final isToday = DateFormat('yyyy-MM-dd').format(DateTime.now()) == data.date;
 
-        const SizedBox(height: 12),
-
-        // Date labels
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: displayData.map((data) {
-              final date = DateTime.parse(data.date);
-              final dateStr = DateFormat('MM/dd').format(date);
-              final isToday = DateFormat('yyyy-MM-dd').format(DateTime.now()) == data.date;
-
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isToday)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _skyBlue.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'Today',
-                        style: TextStyle(
-                          fontSize: 8,
-                          color: _skyBlue,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox(height: 14),
-                  
-                  const SizedBox(height: 4),
-                  
-                  Text(
-                    dateStr,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isToday ? _skyBlue : _white.withOpacity(0.6),
-                      fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
-                    ),
+            return Column(
+              children: [
+                Text(
+                  dayName,
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: isToday ? _skyBlue : _white.withOpacity(0.3),
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                   ),
-                  
-                  const SizedBox(height: 2),
-                  
-                  Text(
-                    '${data.percentage.toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _white.withOpacity(0.5),
-                      fontWeight: FontWeight.w500,
-                    ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${data.percentage.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isToday ? _white : _white.withOpacity(0.6),
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
                   ),
-                ],
-              );
-            }).toList(),
-          ),
+                ),
+              ],
+            );
+          }).toList(),
         ),
-
-        const SizedBox(height: 12),
-
-     
       ],
     );
   }
-
 }
 
 // ============================================================================
@@ -456,133 +414,84 @@ class _LineGraphPainter extends CustomPainter {
   final List<AttendanceTrendData> data;
   final Color lineColor;
   final Color dotColor;
-  final Color gridColor;
+  final Color targetLineColor;
 
   _LineGraphPainter({
     required this.data,
     required this.lineColor,
     required this.dotColor,
-    required this.gridColor,
+    required this.targetLineColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (data.length < 2) return; // Only draw graph elements if there are 2 or more points
+    if (data.length < 2) return;
 
-    // Draw grid lines
-    final gridPaint = Paint()
-      ..color = gridColor
-      ..strokeWidth = 0.5
-      ..style = PaintingStyle.stroke;
+    final double xStep = size.width / (data.length - 1);
+    final List<Offset> points = [];
 
-    for (int i = 0; i <= 4; i++) {
-      final y = size.height * (i / 4);
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(size.width, y),
-        gridPaint,
-      );
-    }
-
-    // Calculate positions
-    final maxPercentage = 100.0;
-    final minPercentage = 0.0;
-    final range = maxPercentage - minPercentage;
-
-    final points = <Offset>[];
-    // This logic assumes data.length >= 2, which is true when called from build.
-    // If data.length is 1, the painter won't draw lines/fill, only points.
-    // However, the calling widget handles data.length < 2, so we can assume
-    // the list is for a trend (length >= 2) or contains points (length >= 1).
-    // Let's modify the point calculation for robustness.
-    final horizontalFactor = data.length > 1 ? (size.width / (data.length - 1)) : 0.0;
-
+    // Calculate Points
     for (int i = 0; i < data.length; i++) {
-      final x = data.length > 1 ? horizontalFactor * i : size.width / 2; // Center if only one point
-      final normalizedValue = (data[i].percentage - minPercentage) / range;
-      final y = size.height - (normalizedValue * size.height);
-      points.add(Offset(x, y));
+      double y = size.height - (data[i].percentage / 100 * size.height);
+      points.add(Offset(i * xStep, y.clamp(5, size.height - 5)));
     }
 
-
-    // Draw gradient fill under line (only if a line can be drawn)
-    if (points.length > 1) {
-      final fillPath = Path();
-      fillPath.moveTo(points.first.dx, size.height);
-      for (final point in points) {
-        fillPath.lineTo(point.dx, point.dy);
-      }
-      fillPath.lineTo(points.last.dx, size.height);
-      fillPath.close();
-
-      final fillPaint = Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            lineColor.withOpacity(0.2),
-            lineColor.withOpacity(0.0),
-          ],
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-      canvas.drawPath(fillPath, fillPaint);
+    // 1. Draw 75% Target Line (Dashed)
+    final targetY = size.height - (75 / 100 * size.height);
+    final dashPaint = Paint()
+      ..color = targetLineColor
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    
+    double dashWidth = 5, dashSpace = 5, startX = 0;
+    while (startX < size.width) {
+      canvas.drawLine(Offset(startX, targetY), Offset(startX + dashWidth, targetY), dashPaint);
+      startX += dashWidth + dashSpace;
     }
 
-    // Draw line with smooth curves (only if a line can be drawn)
-    if (points.length > 1) {
-      final linePath = Path();
-      linePath.moveTo(points.first.dx, points.first.dy);
+    // 2. Draw Area Gradient
+    final fillPath = Path();
+    fillPath.moveTo(points.first.dx, size.height);
+    fillPath.lineTo(points.first.dx, points.first.dy);
+    for (int i = 0; i < points.length - 1; i++) {
+      var p0 = points[i];
+      var p1 = points[i + 1];
+      fillPath.cubicTo(p0.dx + (p1.dx - p0.dx) / 2, p0.dy, p0.dx + (p1.dx - p0.dx) / 2, p1.dy, p1.dx, p1.dy);
+    }
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
 
-      for (int i = 0; i < points.length - 1; i++) {
-        final current = points[i];
-        final next = points[i + 1];
-        final controlPoint1 = Offset(
-          current.dx + (next.dx - current.dx) / 2,
-          current.dy,
-        );
-        final controlPoint2 = Offset(
-          current.dx + (next.dx - current.dx) / 2,
-          next.dy,
-        );
-        linePath.cubicTo(
-          controlPoint1.dx,
-          controlPoint1.dy,
-          controlPoint2.dx,
-          controlPoint2.dy,
-          next.dx,
-          next.dy,
-        );
-      }
+    canvas.drawPath(fillPath, Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [lineColor.withOpacity(0.15), lineColor.withOpacity(0)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)));
 
-      final linePaint = Paint()
-        ..color = lineColor
-        ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawPath(linePath, linePaint);
+    // 3. Draw Smooth Line
+    final linePath = Path();
+    linePath.moveTo(points.first.dx, points.first.dy);
+    for (int i = 0; i < points.length - 1; i++) {
+      var p0 = points[i];
+      var p1 = points[i + 1];
+      linePath.cubicTo(p0.dx + (p1.dx - p0.dx) / 2, p0.dy, p0.dx + (p1.dx - p0.dx) / 2, p1.dy, p1.dx, p1.dy);
     }
 
-    // Draw dots at data points
-    for (int i = 0; i < points.length; i++) {
-      // Outer glow
-      final glowPaint = Paint()
-        ..color = dotColor.withOpacity(0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-      canvas.drawCircle(points[i], 6, glowPaint);
+    canvas.drawPath(linePath, Paint()
+      ..color = lineColor
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round);
 
-      // Outer ring
-      final outerPaint = Paint()
-        ..color = dotColor.withOpacity(0.4)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
-      canvas.drawCircle(points[i], 5, outerPaint);
-
-      // Inner dot
-      final dotPaint = Paint()
-        ..color = dotColor
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(points[i], 3.5, dotPaint);
+    // 4. Draw Data Points (Bead Style)
+    for (var i = 0; i < points.length; i++) {
+      final isLast = i == points.length - 1;
+      // Shadow/Glow
+      canvas.drawCircle(points[i], isLast ? 6 : 4, Paint()
+        ..color = lineColor.withOpacity(0.3)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+      // Point
+      canvas.drawCircle(points[i], isLast ? 3.5 : 2.5, Paint()..color = isLast ? dotColor : lineColor);
     }
   }
 

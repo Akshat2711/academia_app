@@ -307,13 +307,15 @@ class _DayOrderCardState extends State<DayOrderCard> {
                               color: _neonPink.withOpacity(0.8),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              classInfo['classroom'] ?? '',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: _white.withOpacity(0.7),
-                              ),
-                            ),
+                       Text(
+                        (classInfo['classroom']?.toString().trim().isNotEmpty ?? false)
+                            ? classInfo['classroom'].toString() 
+                            : 'N/A',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _white.withOpacity(0.7),
+                        ),
+                      ),
                           ],
                         ),
                       ],
@@ -322,6 +324,7 @@ class _DayOrderCardState extends State<DayOrderCard> {
                 },
               ),
             ),
+             SizedBox(height: 46),// Extra space at bottom
         ],
       ),
     );

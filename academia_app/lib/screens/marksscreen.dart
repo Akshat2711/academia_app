@@ -16,7 +16,7 @@ class _MarksScreenState extends State<MarksScreen> {
   // --- UPDATED COLOR PALETTE (GREEN/WHITE/BLACK/GRAY ONLY) ---
   static const Color _pitchBlack = Color(0xFF000000);
   static const Color _darkGray = Color(0xFF0F0F0F);
-  static const Color _cardBg = Color(0xFF1A1A1A);
+  static const Color _cardBg = Color.fromARGB(255, 20, 20, 24);
   static const Color _neonGreen = Color.fromARGB(255, 70, 71, 73); // Primary Accent
   static const Color _white = Colors.white;
   static const Color _cautionGreen = Color(0xFF76FF03); // Lighter green for caution
@@ -280,219 +280,190 @@ Future<void> _loadMarksFromPrefs() async {
     );
   }
 
-  Widget _buildCourseMarksCard(Map<String, dynamic> course) {
-    final tests = course['tests'] as List<Map<String, dynamic>>;
-    final totals = _calculateCourseTotals(tests);
+ Widget _buildCourseMarksCard(Map<String, dynamic> course) {
+  final tests = course['tests'] as List<Map<String, dynamic>>;
+  final totals = _calculateCourseTotals(tests);
 
-    final double totalObtained = totals['obtained'];
-    final double totalMax = totals['max'];
-    final double overallPercentage = totals['percentage'];
+  final double totalObtained = totals['obtained'];
+  final double totalMax = totals['max'];
+  final double overallPercentage = totals['percentage'];
 
-    List<double> percentages =
-        tests.map((t) => (t['percentage'] as num).toDouble()).toList();
-    percentages = percentages.reversed.toList();
+  List<double> percentages =
+      tests.map((t) => (t['percentage'] as num).toDouble()).toList();
+  percentages = percentages.reversed.toList();
 
-    // Trend colors logic (NOT CHANGED)
-    Color sparklineColor = const Color.fromARGB(255, 174, 214, 167); // Default: Improvement/Good
-    Color lastPointColor = const Color.fromARGB(255, 241, 245, 240); // Default: Last score is good/improved
-
-    if (percentages.length >= 2) {
-      if (percentages.last < percentages[percentages.length - 2]) {
-        // Decline: Use Dark Gray
-        sparklineColor = _declineGray; 
-        lastPointColor = _declineGray; 
-      } else if (percentages.last == percentages[percentages.length - 2]) {
-        // Steady: Use Caution Green
-        lastPointColor = const Color.fromARGB(255, 220, 227, 215); 
-        sparklineColor = const Color.fromARGB(255, 166, 206, 136);
-      }
-      // If percentages.last > percentages[percentages.length - 2], keep original colors
+  // Logic for Trend Colors
+  Color statusColor = _getScoreColor(overallPercentage);
+  Color sparklineColor = const Color(0xFFAED6A7); 
+  
+  if (percentages.length >= 2) {
+    if (percentages.last < percentages[percentages.length - 2]) {
+      sparklineColor = _declineGray; 
     }
+  }
 
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: _cardBg,
-        borderRadius: BorderRadius.circular(14),
-        
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: Course Title and Score
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        course['title'],
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: _white,
-                          letterSpacing: 0.3,
-                        ),
-                        maxLines: 2, // Retained wrapping logic
-                        overflow: TextOverflow.ellipsis, // Retained overflow logic
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        course['type'],
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _neonGreen.withOpacity(0.7),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (tests.isNotEmpty)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      // Uses the score color logic
-                      color: _getScoreColor(overallPercentage)
-                          .withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          // **UPDATED**: total marks to display with one decimal place
-                          '${totalObtained.toStringAsFixed(1)}/${totalMax.toStringAsFixed(1)}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            // Uses the score color logic
-                            color: _getScoreColor(overallPercentage), 
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${overallPercentage.toStringAsFixed(0)}%',
-                          style: TextStyle(
-                            fontSize: 11,
-                            // Uses the score color logic
-                            color: _getScoreColor(overallPercentage)
-                                .withOpacity(0.8),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-
-            // Sparkline (NOT CHANGED)
-            if (percentages.length > 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 16, bottom: 12),
-                child: SizedBox(
-                  height: 50,
-                  child: _MarksTrendSparkline(
-                    percentages: percentages,
-                    // Uses the sparkline trend colors
-                    lineColor: sparklineColor,
-                    lastPointColor: lastPointColor,
-                  ),
-                ),
-              )
-            else if (percentages.length == 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 8),
-                child: Text(
-                  'Only one test score recorded',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _textSecondary.withOpacity(0.7),
-                  ),
+  return Container(
+    margin: const EdgeInsets.only(bottom: 20),
+    decoration: BoxDecoration(
+      color: _cardBg,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: _white.withOpacity(0.05)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. SLEEK HEADER
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Vertical Status Accent
+              Container(
+                width: 4,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-
-            // Test Details
-            if (tests.isNotEmpty) ...[
-              Divider(color: _white.withOpacity(0.08), height: 14),
-              const SizedBox(height: 8),
-              ...tests.map<Widget>((test) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              test['name'],
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: _white,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              // Individual test scores already use one decimal place
-                              '${(test['obtained'] as num).toStringAsFixed(1)} / ${(test['max'] as num).toStringAsFixed(1)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _textSecondary.withOpacity(0.8),
-                              ),
-                            ),
-                          ],
-                        ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course['title'],
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _white,
+                        letterSpacing: -0.5,
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          // Uses the score color logic
-                          color: _getScoreColor(test['percentage'])
-                              .withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${(test['percentage'] as double).toStringAsFixed(0)}%',
-                          style: TextStyle(
-                            // Uses the score color logic
-                            color: _getScoreColor(test['percentage']),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
+                    ),
+                    Text(
+                      course['type'].toString().toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: _white.withOpacity(0.4),
+                        letterSpacing: 1.2,
                       ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ] else ...[
-              const SizedBox(height: 8),
-              Text(
-                'No tests recorded',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: _textSecondary.withOpacity(0.7),
+                    ),
+                  ],
                 ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${overallPercentage.toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: statusColor,
+                    ),
+                  ),
+                  Text(
+                    '${totalObtained.toStringAsFixed(1)} / ${totalMax.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _white.withOpacity(0.5),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ],
-          ],
+          ),
         ),
-      ),
-    );
-  }
+
+        // 2. THE MODERN GRAPH (Area Chart)
+        if (percentages.length > 1)
+          Container(
+            height: 90,
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 10),
+            child: _MarksTrendSparkline(
+              percentages: percentages,
+              lineColor: sparklineColor,
+              lastPointColor: _white,
+            ),
+          ),
+
+        // 3. ASSESSMENT LIST
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.analytics_outlined, size: 14, color: _white.withOpacity(0.3)),
+                  const SizedBox(width: 6),
+                  Text(
+                    "DETAILED PERFORMANCE",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: _white.withOpacity(0.3),
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ...tests.map((test) => _buildModernTestRow(test)).toList(),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildModernTestRow(Map<String, dynamic> test) {
+  final color = _getScoreColor(test['percentage']);
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                test['name'],
+                style: TextStyle(
+                  color: _white.withOpacity(0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${test['obtained']} / ${test['max']} marks',
+                style: TextStyle(color: _white.withOpacity(0.4), fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withOpacity(0.2)),
+          ),
+          child: Text(
+            '${(test['percentage'] as double).toStringAsFixed(0)}%',
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }
 
 // =======================================================================
@@ -536,122 +507,64 @@ class _MarksTrendPainter extends CustomPainter {
     required this.percentages,
     required this.lineColor,
     required this.lastPointColor,
-  }) : assert(percentages.length >= 2);
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    const double range = 100.0;
-    const double verticalPaddingFactor = 0.12;
-    final verticalPadding = size.height * verticalPaddingFactor;
-    final drawingHeight = size.height - 2 * verticalPadding;
+    if (percentages.length < 2) return;
 
-    // Calculate points
-    final List<Offset> points = [];
-    final double xStep = size.width / (percentages.length - 1);
-
-    for (int i = 0; i < percentages.length; i++) {
-      final percentage = percentages[i].clamp(0.0, 100.0);
-      final x = i * xStep;
-      final normalizedY = percentage / range;
-      final y = size.height - verticalPadding - (normalizedY * drawingHeight);
-
-      points.add(Offset(x, y.clamp(0, size.height)));
-    }
-
-    // Draw fill
+    final path = Path();
     final fillPath = Path();
-    fillPath.moveTo(points.first.dx, size.height);
-    fillPath.lineTo(points.first.dx, points.first.dy);
-
-    for (int i = 1; i < points.length; i++) {
-      final p1 = points[i - 1];
-      final p2 = points[i];
-
-      fillPath.cubicTo(
-        (p1.dx + p2.dx) / 2,
-        p1.dy,
-        (p1.dx + p2.dx) / 2,
-        p2.dy,
-        p2.dx,
-        p2.dy,
-      );
+    final double xStep = size.width / (percentages.length - 1);
+    
+    // Smooth points calculation
+    List<Offset> points = [];
+    for (int i = 0; i < percentages.length; i++) {
+      double y = size.height - (percentages[i] / 100 * size.height);
+      points.add(Offset(i * xStep, y.clamp(5, size.height - 5)));
     }
 
-    fillPath.lineTo(points.last.dx, size.height);
-    fillPath.close();
+    path.moveTo(points[0].dx, points[0].dy);
+    fillPath.moveTo(0, size.height);
+    fillPath.lineTo(points[0].dx, points[0].dy);
 
+    for (int i = 0; i < points.length - 1; i++) {
+      var p0 = points[i];
+      var p1 = points[i + 1];
+      var controlPoint1 = Offset(p0.dx + (p1.dx - p0.dx) / 2, p0.dy);
+      var controlPoint2 = Offset(p0.dx + (p1.dx - p0.dx) / 2, p1.dy);
+
+      path.cubicTo(controlPoint1.dx, controlPoint1.dy, controlPoint2.dx, controlPoint2.dy, p1.dx, p1.dy);
+      fillPath.cubicTo(controlPoint1.dx, controlPoint1.dy, controlPoint2.dx, controlPoint2.dy, p1.dx, p1.dy);
+    }
+
+    // Draw Fill Gradient
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
     final fillPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          lineColor.withOpacity(0.12),
-          lineColor.withOpacity(0.01),
-        ],
-      ).createShader(Rect.fromLTRB(0, 0, size.width, size.height))
-      ..style = PaintingStyle.fill;
-
+        colors: [lineColor.withOpacity(0.2), lineColor.withOpacity(0.0)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawPath(fillPath, fillPaint);
 
-    // Draw line
-    final linePath = Path();
-    linePath.moveTo(points.first.dx, points.first.dy);
-
-    for (int i = 1; i < points.length; i++) {
-      final p1 = points[i - 1];
-      final p2 = points[i];
-
-      linePath.cubicTo(
-        (p1.dx + p2.dx) / 2,
-        p1.dy,
-        (p1.dx + p2.dx) / 2,
-        p2.dy,
-        p2.dx,
-        p2.dy,
-      );
-    }
-
+    // Draw Smooth Line
     final linePaint = Paint()
       ..color = lineColor
-      ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
+    canvas.drawPath(path, linePaint);
 
-    canvas.drawPath(linePath, linePaint);
-
-    // Draw points
-    final pointPaint = Paint()..style = PaintingStyle.fill;
-
-    for (int i = 0; i < points.length - 1; i++) {
-      // Use the line color for internal points
-      pointPaint.color = lineColor.withOpacity(0.6); 
-      canvas.drawCircle(points[i], 2.5, pointPaint);
-    }
-
-    // Last point
-    if (points.isNotEmpty) {
-      pointPaint.color = lastPointColor;
-      canvas.drawCircle(points.last, 3.5, pointPaint);
-
-      final centerPaint = Paint()
-        ..color = Colors.white.withOpacity(0.8)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(points.last, 1.2, centerPaint);
-    }
+    // Draw Last Point Glow
+    final glowPaint = Paint()
+      ..color = lastPointColor.withOpacity(0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawCircle(points.last, 6, glowPaint);
+    canvas.drawCircle(points.last, 3, Paint()..color = lastPointColor);
   }
 
   @override
-  bool shouldRepaint(covariant _MarksTrendPainter oldDelegate) {
-    if (percentages.length != oldDelegate.percentages.length ||
-        lineColor != oldDelegate.lineColor ||
-        lastPointColor != oldDelegate.lastPointColor) {
-      return true;
-    }
-    for (int i = 0; i < percentages.length; i++) {
-      if (percentages[i] != oldDelegate.percentages[i]) {
-        return true;
-      }
-    }
-    return false;
-  }
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
