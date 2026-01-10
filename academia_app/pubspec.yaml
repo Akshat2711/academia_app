@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+11
+version: 1.0.0+12
 
 environment:
   sdk: ^3.9.2
@@ -145,12 +145,12 @@ flutter_native_splash:
     image: assets/logo_console.png  # Android 12+ splash image
     icon_background_color: "#000000"  # 🖤 Black background for icon area
 
-#for icon generation
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/logo_console.png"  # path to your app icon
-  min_sdk_android: 21            # optional
+  min_sdk_android: 21
 
+  image_path: "assets/logo_console_new.png"
 
-  
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/logo_console_new.png"

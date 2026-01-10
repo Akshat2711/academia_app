@@ -7,6 +7,7 @@ import '../screens/calender_screen.dart';
 import '../screens/annoucement_screen.dart';
 import '../screens/imp_links_screen.dart';
 import '../screens/studymaterial_screen.dart';
+import '../screens/mess_menu_screen.dart';
 
 class QuickActions extends StatelessWidget {
   final Color primaryColor;
@@ -77,6 +78,15 @@ class QuickActions extends StatelessWidget {
           'Announcements',
           primaryColor,
           const AnnouncementScreen(),
+          isFullWidth: true,
+        ),
+        const SizedBox(height: 12), // Controlled small gap
+        _buildActionTile(
+          context,
+          Icons.restaurant_menu_rounded,
+          'Mess Menu',
+          const Color.fromARGB(255, 233, 107, 174),
+          const MessMenuScreen(),
           isFullWidth: true,
         ),
       ],

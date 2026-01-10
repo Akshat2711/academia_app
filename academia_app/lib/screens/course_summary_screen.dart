@@ -2,28 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/cupertino.dart';
 
-// Define the keys you use to store the JSON strings in SharedPreferences
+// --- PREMIUM DESIGN CONSTANTS ---
+const Color kPitchBlack = Color(0xFF000000);
+const Color kCardBlack = Color(0xFF111111);
+const Color kAccentOrange = Color(0xFFFF9800);
+const Color kSurfaceGrey = Color(0xFF1E1E1E);
+const Color kMutedText = Colors.white54;
+
+// Key constants for your SharedPreferences
 const String USER_DATA_KEY = 'userData';
 const String GRAPH_DATA_KEY = 'GRAPH_ATTENDANCE';
-
-// --- UPDATED COLOR THEME: VIVID ORANGE (No Green/Blue) ---
-const Color _pitchBlack = Color(0xFF000000);
-const Color _white = Colors.white;
-const Color _vividOrange = Color(0xFFFF9800); // Primary Orange Accent
-const Color _lightOrange = Color(0xFFFFB74D); // Lighter shade for borders/subtle elements
-// -------------------------------------------
 
 // =================================================================
 // 1. DATA MODELS
 // =================================================================
 
 class CourseAttendanceData {
-  final String courseTitle;
-  final String facultyName;
+  final String courseTitle, facultyName;
   final double attendancePercentage;
-  final int hoursConducted;
-  final int hoursAbsent;
+  final int hoursConducted, hoursAbsent;
 
   CourseAttendanceData({
     required this.courseTitle,
@@ -36,10 +35,7 @@ class CourseAttendanceData {
 
 class TestMarks {
   final String testName;
-  final double obtainedMarks;
-  final double maxMarks;
-  final double percentage;
-
+  final double obtainedMarks, maxMarks, percentage;
   TestMarks({
     required this.testName,
     required this.obtainedMarks,
@@ -51,12 +47,11 @@ class TestMarks {
 class GraphDataPoint {
   final String date;
   final double percentage;
-
   GraphDataPoint({required this.date, required this.percentage});
 }
 
 // =================================================================
-// 2. ASYNCHRONOUS DATA SERVICE (Made Robust)
+// 2. DATA SERVICE (Logic directly from your implementation)
 // =================================================================
 
 class CourseDataService {
@@ -66,36 +61,29 @@ class CourseDataService {
 
   static final CourseDataService _instance = CourseDataService._internal();
   factory CourseDataService() => _instance;
-
   CourseDataService._internal();
 
   Future<void> loadData() async {
     _prefs = await SharedPreferences.getInstance();
-
     String? userDataString = _prefs.getString(USER_DATA_KEY);
     String? graphDataString = _prefs.getString(GRAPH_DATA_KEY);
 
     try {
       _userData = (userDataString != null) ? json.decode(userDataString) : {};
     } catch (e) {
-      debugPrint("Error decoding userData: $e");
       _userData = {};
     }
 
     try {
       _graphAttendance = (graphDataString != null) ? json.decode(graphDataString) : {};
     } catch (e) {
-      debugPrint("Error decoding graphData: $e");
       _graphAttendance = {};
     }
   }
 
   String _getCourseKey(String courseCode, Map<String, dynamic> dataMap) {
     try {
-      return dataMap.keys.firstWhere(
-        (key) => key.startsWith(courseCode),
-        orElse: () => '',
-      );
+      return dataMap.keys.firstWhere((key) => key.startsWith(courseCode), orElse: () => '');
     } catch (e) {
       return '';
     }
@@ -104,16 +92,12 @@ class CourseDataService {
   CourseAttendanceData? getCourseAttendance(String courseCode) {
     try {
       final attendanceMap = _userData['attendance']?['attendance']?['courses'] as Map<String, dynamic>?;
-
       if (attendanceMap == null) return null;
-
       final key = _getCourseKey(courseCode, attendanceMap);
       if (key.isEmpty) return null;
-
       final data = attendanceMap[key];
       if (data == null) return null;
 
-      // SAFE PARSING: Uses ?? to provide defaults if JSON fields are missing
       return CourseAttendanceData(
         courseTitle: (data['course_title'] ?? 'Unknown Course').toString(),
         facultyName: (data['faculty_name'] ?? 'N/A').toString(),
@@ -122,7 +106,6 @@ class CourseDataService {
         hoursAbsent: ((data['hours_absent'] ?? 0) as num).toInt(),
       );
     } catch (e) {
-      debugPrint("Error parsing attendance for $courseCode: $e");
       return null;
     }
   }
@@ -131,79 +114,56 @@ class CourseDataService {
     try {
       final marksMap = _userData['attendance']?['marks'] as Map<String, dynamic>?;
       if (marksMap == null) return [];
-
       final relatedKeys = marksMap.keys.where((k) => k.startsWith(courseCode)).toList();
       List<TestMarks> allMarks = [];
-
       for (var k in relatedKeys) {
         final data = marksMap[k];
         if (data != null && data['tests'] != null && data['tests'] is List) {
-          allMarks.addAll(_parseTestMarks(data['tests']));
+          for (var test in data['tests']) {
+            allMarks.add(TestMarks(
+              testName: (test['test_name'] ?? 'Unknown Test').toString(),
+              obtainedMarks: ((test['obtained_marks'] ?? 0) as num).toDouble(),
+              maxMarks: ((test['max_marks'] ?? 100) as num).toDouble(),
+              percentage: ((test['percentage'] ?? 0) as num).toDouble(),
+            ));
+          }
         }
       }
       return allMarks;
     } catch (e) {
-      debugPrint("Error parsing marks for $courseCode: $e");
       return [];
     }
-  }
-
-  List<TestMarks> _parseTestMarks(List<dynamic> tests) {
-    List<TestMarks> parsed = [];
-    for (var test in tests) {
-      try {
-        parsed.add(TestMarks(
-          testName: (test['test_name'] ?? 'Unknown Test').toString(),
-          obtainedMarks: ((test['obtained_marks'] ?? 0) as num).toDouble(),
-          maxMarks: ((test['max_marks'] ?? 100) as num).toDouble(), // Avoid division by zero issues later
-          percentage: ((test['percentage'] ?? 0) as num).toDouble(),
-        ));
-      } catch (e) {
-        // Skip malformed test entry
-        continue;
-      }
-    }
-    return parsed;
   }
 
   List<GraphDataPoint> getCourseGraphData(String courseCode) {
     try {
       final attendanceMap = _userData['attendance']?['attendance']?['courses'] as Map<String, dynamic>?;
       if (attendanceMap == null) return [];
-
       final key = _getCourseKey(courseCode, attendanceMap);
-      if (key.isEmpty || !_graphAttendance.containsKey(key)) {
-        return [];
-      }
-
-      final singleDataList = _graphAttendance[key];
-      if (singleDataList == null || singleDataList is! List || singleDataList.isEmpty) return [];
+      if (key.isEmpty || !_graphAttendance.containsKey(key)) return [];
+      final singleDataList = _graphAttendance[key] as List;
       
       return singleDataList.map<GraphDataPoint>((item) {
-        // Safe parsing for graph points
         String dateStr = (item['date'] ?? '00-00').toString();
         String formattedDate = dateStr.length >= 7 ? dateStr.substring(5) : dateStr;
-
         return GraphDataPoint(
           date: formattedDate,
           percentage: ((item['percentage'] ?? 0) as num).toDouble(),
         );
       }).toList();
     } catch (e) {
-      debugPrint("Error parsing graph data: $e");
       return [];
     }
   }
 }
 
 // =================================================================
-// 3. COURSE DETAIL SCREEN
+// 3. COURSE DETAIL SCREEN (REDESIGN + INTEGRATION)
 // =================================================================
 
 class CourseDetailScreen extends StatelessWidget {
   final String courseCode;
-
-  CourseDetailScreen({super.key, required this.courseCode});
+  const CourseDetailScreen({super.key, required this.courseCode});
 
   @override
   Widget build(BuildContext context) {
@@ -211,27 +171,19 @@ class CourseDetailScreen extends StatelessWidget {
       future: CourseDataService().loadData(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            backgroundColor: _pitchBlack,
-            appBar: AppBar(
-              backgroundColor: _pitchBlack,
-              title: const Text('Loading Data...', style: TextStyle(color: _white)),
-              iconTheme: const IconThemeData(color: _white),
-            ),
-            body: const Center(child: CircularProgressIndicator(color: _vividOrange)),
+          return const Scaffold(
+            backgroundColor: kPitchBlack,
+            body: Center(child: CircularProgressIndicator(color: kAccentOrange)),
           );
         }
 
-        final CourseDataService dataService = CourseDataService();
-        
-        // Fetch data
-        CourseAttendanceData? fetchedAttendance = dataService.getCourseAttendance(courseCode);
-        final marksData = dataService.getCourseMarks(courseCode);
+        final dataService = CourseDataService();
+        final attendance = dataService.getCourseAttendance(courseCode);
+        final marks = dataService.getCourseMarks(courseCode);
         final graphData = dataService.getCourseGraphData(courseCode);
 
-        // FALLBACK: If attendance is completely missing, create a dummy object so the page works.
-        // This ensures users can still see Marks or other info even if Attendance is null.
-        final CourseAttendanceData attendanceData = fetchedAttendance ?? CourseAttendanceData(
+        // Fallback for safety
+        final courseData = attendance ?? CourseAttendanceData(
           courseTitle: 'Course: $courseCode',
           facultyName: 'Data Not Available',
           attendancePercentage: 0.0,
@@ -240,98 +192,53 @@ class CourseDetailScreen extends StatelessWidget {
         );
 
         return Scaffold(
-          backgroundColor: _pitchBlack,
+          backgroundColor: kPitchBlack,
           appBar: AppBar(
-            backgroundColor: _pitchBlack,
-            title: const Text("Course Overview", style: TextStyle(color: _white)),
-            iconTheme: const IconThemeData(color: _white),
+            backgroundColor: kPitchBlack,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  attendanceData.courseTitle,
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: _white),
-                ),
-                Text(
-                  'Course Code: $courseCode',
-                  style: TextStyle(fontSize: 16, color: _vividOrange.withOpacity(0.8)),
-                ),
-                const SizedBox(height: 20),
-
-                // Only show Faculty info if we actually have data, otherwise simple N/A
-                _buildInfoCard(
-                  title: 'Faculty & Type',
-                  icon: Icons.info_outline,
+                _buildHeader(courseData.courseTitle, courseCode),
+                const SizedBox(height: 30),
+                
+                // Info Section
+                Row(
                   children: [
-                    _buildDetailRow(
-                      label: 'Faculty Name',
-                      value: attendanceData.facultyName.split('(').first.trim(),
-                    ),
-                    _buildDetailRow(
-                      label: 'Course Type',
-                      value: attendanceData.courseTitle.contains('Practical') ? 'Practical' : 'Theory',
-                    ),
+                    Expanded(child: _buildMetricTile("Faculty", courseData.facultyName.split('(').first, Icons.person_outline)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildMetricTile("Type", courseData.courseTitle.contains('Practical') ? 'Practical' : 'Theory', Icons.layers_outlined)),
                   ],
                 ),
+                const SizedBox(height: 32),
 
-                _buildInfoCard(
-                  title: 'Attendance Status',
-                  icon: Icons.check_circle_outline,
-                  children: [
-                    _buildAttendanceIndicator(attendanceData.attendancePercentage),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(
-                      label: 'Current Percentage',
-                      value: '${attendanceData.attendancePercentage.toStringAsFixed(2)}%',
-                      isAccent: true,
-                    ),
-                    _buildDetailRow(
-                      label: 'Hours Absent',
-                      value: attendanceData.hoursAbsent.toString(),
-                    ),
-                    _buildDetailRow(
-                      label: 'Total Hours Conducted',
-                      value: attendanceData.hoursConducted.toString(),
-                    ),
-                  ],
-                ),
+                // Attendance Section
+                _buildSectionTitle("Attendance Overview"),
+                _buildAttendanceCard(courseData),
+                const SizedBox(height: 32),
 
-                _buildInfoCard(
-                  title: 'Attendance Trend',
-                  icon: Icons.trending_up,
-                  children: [
-                    CourseAttendanceGraph(graphData: graphData),
-                    if (graphData.length < 5)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(
-                          graphData.isEmpty 
-                              ? 'No historical trend data available.' 
-                              : 'Note: Only ${graphData.length} historical data point(s) found.',
-                          style: TextStyle(color: _vividOrange.withOpacity(0.6), fontStyle: FontStyle.italic, fontSize: 12),
-                        ),
-                      ),
-                  ],
-                ),
+                // Graph Section
+                _buildSectionTitle("Attendance Trend"),
+                _buildTrendCard(graphData),
+                const SizedBox(height: 32),
 
-                _buildInfoCard(
-                  title: 'Assessment Marks',
-                  icon: Icons.assignment_turned_in_outlined,
-                  children: [
-                    if (marksData.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(
-                          'No internal assessment marks found.',
-                          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white70),
-                        ),
-                      ),
-                    ...marksData.map((marks) => _buildMarkEntry(marks)),
-                  ],
-                ),
+                // Marks Section
+                _buildSectionTitle("Assessment Marks"),
+                if (marks.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text("No assessments found.", style: TextStyle(color: kMutedText, fontStyle: FontStyle.italic)),
+                  ),
+                ...marks.map((m) => _buildMarkEntry(m)),
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -340,209 +247,180 @@ class CourseDetailScreen extends StatelessWidget {
     );
   }
 
-  // --- UI Helper Methods (Orange/Black/White) ---
+  // --- UI HELPER COMPONENTS ---
 
-  Widget _buildInfoCard({
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
+  Widget _buildHeader(String title, String code) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: kAccentOrange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: kAccentOrange.withOpacity(0.2)),
+          ),
+          child: Text(code, style: const TextStyle(color: kAccentOrange, fontWeight: FontWeight.bold, fontSize: 11)),
+        ),
+        const SizedBox(height: 12),
+        Text(title, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+      ],
+    );
+  }
+
+  Widget _buildMetricTile(String label, String value, IconData icon) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(0.0),
-      decoration: const BoxDecoration(
-        color: _pitchBlack,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kCardBlack,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Icon(icon, color: kAccentOrange, size: 20),
+          const SizedBox(height: 12),
+          Text(label, style: const TextStyle(color: kMutedText, fontSize: 11)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14), overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16, left: 4),
+      child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildAttendanceCard(CourseAttendanceData data) {
+    final isLow = data.attendancePercentage < 75;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: kCardBlack,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Stack(
+            alignment: Alignment.center,
             children: [
-              Icon(icon, color: _vividOrange, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: _white),
+              SizedBox(
+                width: 85, height: 85,
+                child: CircularProgressIndicator(
+                  value: data.attendancePercentage / 100,
+                  strokeWidth: 9,
+                  backgroundColor: kSurfaceGrey,
+                  color: isLow ? Colors.redAccent : kAccentOrange,
+                  strokeCap: StrokeCap.round,
+                ),
               ),
+              Text("${data.attendancePercentage.toInt()}%", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
-          const Divider(color: Color(0xFF333333), height: 30, thickness: 0.8), // Dark grey divider
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0.0),
-            child: Column(children: children),
-          ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              children: [
+                _buildCompactRow("Conducted", "${data.hoursConducted} Hours"),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(color: Colors.white10, height: 1),
+                ),
+                _buildCompactRow("Absent", "${data.hoursAbsent} Hours"),
+              ],
+            ),
+          )
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow({required String label, required String value, bool isAccent = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.white70,
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: isAccent ? _vividOrange : _white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttendanceIndicator(double percentage) {
-    Color color = _vividOrange;
-
-    if (percentage >= 75) {
-      color = _vividOrange;
-    } else {
-      color = Colors.redAccent;
+  Widget _buildTrendCard(List<GraphDataPoint> graphData) {
+    if (graphData.isEmpty) {
+      return Container(
+        height: 100,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: kCardBlack, borderRadius: BorderRadius.circular(24)),
+        child: const Text("No trend data available", style: TextStyle(color: kMutedText)),
+      );
     }
-    
-    // Safety check for NaN or Infinity
-    double safePercent = percentage.clamp(0.0, 100.0);
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20.0),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: CircularProgressIndicator(
-                value: safePercent / 100,
-                strokeWidth: 10,
-                backgroundColor: const Color(0xFF2C2C2E),
-                valueColor: AlwaysStoppedAnimation<Color>(color),
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: kCardBlack, borderRadius: BorderRadius.circular(24)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: graphData.take(5).map((point) {
+          final barHeight = (point.percentage / 100) * 110;
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text("${point.percentage.toInt()}%", style: const TextStyle(color: kAccentOrange, fontSize: 10, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Container(
+                width: 28, height: max(barHeight, 5.0),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [kAccentOrange, kAccentOrange.withOpacity(0.3)],
+                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
-            ),
-            Text(
-              '${percentage.toStringAsFixed(1)}%',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color),
-            ),
-          ],
-        ),
+              const SizedBox(height: 8),
+              Text(point.date, style: const TextStyle(color: kMutedText, fontSize: 10)),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
 
   Widget _buildMarkEntry(TestMarks marks) {
-    Color markColor = _vividOrange;
-
-    if (marks.percentage > 70) {
-      markColor = _vividOrange;
-    } else {
-      markColor = Colors.redAccent;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kCardBlack,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Text(
-                  marks.testName,
-                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16, color: _white),
-                ),
-              ),
-              Text(
-                '${marks.obtainedMarks.toStringAsFixed(1)} / ${marks.maxMarks.toStringAsFixed(1)}',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: markColor),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: kSurfaceGrey, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.analytics_outlined, color: kAccentOrange, size: 18),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Percentage: ${marks.percentage.toStringAsFixed(2)}%',
-            style: TextStyle(color: markColor.withOpacity(0.8), fontSize: 13),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(marks.testName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text("Score: ${marks.obtainedMarks}/${marks.maxMarks}", style: const TextStyle(color: kMutedText, fontSize: 11)),
+              ],
+            ),
           ),
+          Text("${marks.percentage.toInt()}%", style: const TextStyle(color: kAccentOrange, fontWeight: FontWeight.bold, fontSize: 15)),
         ],
       ),
     );
   }
-}
 
-// --- Bar Graph Widget ---
-class CourseAttendanceGraph extends StatelessWidget {
-  final List<GraphDataPoint> graphData;
-
-  const CourseAttendanceGraph({super.key, required this.graphData});
-
-  @override
-  Widget build(BuildContext context) {
-    if (graphData.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Text('No attendance data available for graphing.', style: TextStyle(color: Colors.white70)),
-        )
-      );
-    }
-
-    // Graph display for multiple points
-    final minPercent = graphData.map((p) => p.percentage).reduce(min);
-    final maxPercent = graphData.map((p) => p.percentage).reduce(max);
-    final baseLine = max(70.0, minPercent - 5.0);
-    final range = maxPercent - baseLine;
-
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: graphData.map((point) {
-          double normalizedHeight = 0.5;
-          if (range > 0) {
-            normalizedHeight = ((point.percentage - baseLine) / range).clamp(0.0, 1.0);
-          }
-          final barHeight = normalizedHeight * 120 + 20;
-
-          Color barColor = _vividOrange.withOpacity(0.8);
-          if (point.percentage < 75) {
-            barColor = Colors.redAccent.withOpacity(0.8);
-          }
-
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                  '${point.percentage.toStringAsFixed(1)}%',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _vividOrange)
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: 25,
-                height: barHeight,
-                decoration: BoxDecoration(
-                  color: barColor,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(point.date, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white70)),
-            ],
-          );
-        }).toList(),
-      ),
+  Widget _buildCompactRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: kMutedText, fontSize: 12)),
+        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+      ],
     );
   }
 }

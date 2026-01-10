@@ -1,44 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-/// FacultyInfo widget
-///
-/// Renders the faculty advisor and academic advisor cards. Accepts an
-/// optional `advisors` map with keys `faculty_advisor` and
-/// `academic_advisor` (each a map with `name`, `email`, `phone`). If
-/// not provided, it falls back to sensible defaults.
+// --- SHARED DESIGN CONSTANTS ---
+const Color kPitchBlack = Color(0xFF000000);
+const Color kCardBlack = Color(0xFF111111);
+const Color kAccentOrange = Color(0xFFFF9800);
+const Color kSurfaceGrey = Color(0xFF1E1E1E);
+const Color kMutedText = Colors.white54;
+
 class FacultyInfo extends StatelessWidget {
   final Map<String, dynamic>? advisors;
 
-  const FacultyInfo({Key? key, this.advisors}) : super(key: key);
+  const FacultyInfo({super.key, this.advisors});
+
+  // --- FUNCTIONAL LOGIC ---
+
+  Future<void> _makeCall(String phoneNumber) async {
+    // Strips spaces and special characters for the dialer
+    final String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    final Uri uri = Uri.parse('tel:$cleanPhone');
+    
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final fa = advisors != null ? advisors!['faculty_advisor'] : null;
-    final aa = advisors != null ? advisors!['academic_advisor'] : null;
+    final fa = advisors?['faculty_advisor'];
+    final aa = advisors?['academic_advisor'];
 
-    // If advisors or specific fields are missing, show 'No data found'
-    final faName = fa != null && fa is Map ? (fa['name']?.toString() ?? 'No data found') : 'No data found';
-    final faEmail = fa != null && fa is Map ? (fa['email']?.toString() ?? 'No data found') : 'No data found';
-    final faPhone = fa != null && fa is Map ? (fa['phone']?.toString() ?? 'No data found') : 'No data found';
-
-    final aaName = aa != null && aa is Map ? (aa['name']?.toString() ?? 'No data found') : 'No data found';
-    final aaEmail = aa != null && aa is Map ? (aa['email']?.toString() ?? 'No data found') : 'No data found';
-    final aaPhone = aa != null && aa is Map ? (aa['phone']?.toString() ?? 'No data found') : 'No data found';
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color.fromARGB(255, 0, 0, 0), Color.fromARGB(255, 0, 0, 0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
             'Advisors',
             style: TextStyle(
               color: Colors.white,
@@ -46,69 +43,129 @@ class FacultyInfo extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
+        ),
+        _buildAdvisorCard(
+          role: 'Faculty Advisor',
+          name: fa?['name'] ?? 'Not Assigned',
+          email: fa?['email'] ?? 'No email provided',
+          phone: fa?['phone'] ?? 'No phone provided',
+        ),
+        const SizedBox(height: 12),
+        _buildAdvisorCard(
+          role: 'Academic Advisor',
+          name: aa?['name'] ?? 'Not Assigned',
+          email: aa?['email'] ?? 'No email provided',
+          phone: aa?['phone'] ?? 'No phone provided',
+        ),
+      ],
+    );
+  }
+
+  // --- SUBTLE UI COMPONENTS ---
+
+  Widget _buildAdvisorCard({
+    required String role,
+    required String name,
+    required String email,
+    required String phone,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: kCardBlack,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Role Label
+          Text(
+            role.toUpperCase(),
+            style: const TextStyle(
+              color: kAccentOrange, 
+              fontSize: 10, 
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Name
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white, 
+              fontSize: 17, 
+              fontWeight: FontWeight.bold
+            ),
+          ),
           const SizedBox(height: 16),
-          _advisorInfo('Faculty Advisor', faName, faEmail, faPhone),
-          const SizedBox(height: 12),
-          const Divider(color: Colors.white24),
-          const SizedBox(height: 12),
-          _advisorInfo('Academic Advisor', aaName, aaEmail, aaPhone),
+          
+          // Static Info Rows (Visible but not clickable)
+          _buildInfoRow(Icons.alternate_email_rounded, email),
+          const SizedBox(height: 8),
+          _buildInfoRow(Icons.phone_iphone_rounded, phone),
+          
+          const SizedBox(height: 20),
+          
+          // Action Button (Only Call)
+          if (phone != 'No phone provided' && phone.isNotEmpty)
+            _buildCallButton(onTap: () => _makeCall(phone)),
         ],
       ),
     );
   }
 
-  Widget _advisorInfo(String role, String name, String email, String phone) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
       children: [
-        Text(
-          role,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Icon(Icons.email, color: Colors.white70, size: 14),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                email,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                ),
-              ),
+        Icon(icon, color: Colors.white24, size: 14),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white70, 
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            const Icon(Icons.phone, color: Colors.white70, size: 14),
-            const SizedBox(width: 8),
-            Text(
-              phone,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-              ),
-            ),
-          ],
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCallButton({required VoidCallback onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: kSurfaceGrey,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.phone_in_talk_rounded, color: kAccentOrange, size: 16),
+              const SizedBox(width: 10),
+              Text(
+                'Call Advisor',
+                style: TextStyle(
+                  color: Colors.white, 
+                  fontSize: 14, 
+                  fontWeight: FontWeight.w600
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

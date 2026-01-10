@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import '../screens/course_summary_screen.dart';
 //FOR IOS LIKE TRANSITION
 import 'package:flutter/cupertino.dart'; 
+import 'package:flutter/services.dart';
 
 // Define custom colors for the new minimalist dark theme
-const Color accentOrange = Color(0xFFFF9800); // Used for text/accents
+const Color accentOrange = Color.fromRGBO(255, 162, 22, 0.942); // Used for text/accents
 const Color darkBackground = Color(0xFF121212); // Primary pitch black background
-const Color cardBackground = Color(0xFF1E1E1E); // Subtle variant of black for the card
+const Color cardBackground = Color(0xFF121212); // Subtle variant of black for the card
 
 // A reusable course card used by TimetableScreen and other places.
 class SubjectInfo extends StatelessWidget {
@@ -30,7 +31,7 @@ class SubjectInfo extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardBackground, // Subtle dark grey background
-        borderRadius: BorderRadius.circular(12), // Slightly softer corners
+        borderRadius: BorderRadius.circular(24), // Slightly softer corners
         // Removed border color and box shadow for a cleaner, flatter look
       ),
       child: Material(
@@ -39,6 +40,7 @@ class SubjectInfo extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: () {
             // Navigate to CourseDetailScreen
+            HapticFeedback.lightImpact();
             Navigator.push(
               context,
               CupertinoPageRoute(
@@ -88,7 +90,7 @@ class SubjectInfo extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), // Reduced vertical padding
                       decoration: BoxDecoration(
                         color: accentOrange.withOpacity(0.1), // Very subtle orange background
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(24),
                       ),
                       child: Text(
                         '$credits Credits',

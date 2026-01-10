@@ -267,151 +267,74 @@
 
 
 2026 first half:
-{
-  "1_1_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "New Year’s Day - Holiday"
-      }
-    ]
-  },
-  "5_1_2026": {
-    "event": [
-      {
-        "type": "event",
-        "desc": "Enrolment Day - B.Tech - I,II,III,IV / M.Tech (Int) - I,II,III,IV,V / M.Tech - I,II (Year)"
-      }
-    ]
-  },
-  "6_1_2026": {
-    "event": [
-      {
-        "type": "event",
-        "desc": "Commencement of Classes for - B.Tech - I,II,III,IV / M.Tech (Int) - I,II,III,IV,V / M.Tech - I,II (Year)"
-      }
-    ]
-  },
-  "15_1_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Pongal - Holiday"
-      }
-    ]
-  },
-  "16_1_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Thiruvalluvar Day - Holiday"
-      }
-    ]
-  },
-  "17_1_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Uzhavar Thirunal - Holiday"
-      }
-    ]
-  },
-  "26_1_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Republic Day - Holiday"
-      }
-    ]
-  },
-  "1_2_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Thaipoosam - Holiday"
-      }
-    ]
-  },
-  "4_3_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Holi - Holiday"
-      }
-    ]
-  },
-  "19_3_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Telugu New Year’s Day - Holiday"
-      }
-    ]
-  },
-  "21_3_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Ramzan - Holiday"
-      }
-    ]
-  },
-  "31_3_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Mahaveer Jayanthi - Holiday"
-      }
-    ]
-  },
-  "3_4_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Good Friday - Holiday"
-      }
-    ]
-  },
-  "14_4_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Tamil New Year’s Day / Dr. B.R. Ambedkar's Birthday - Holiday"
-      }
-    ]
-  },
-  "1_5_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "May Day - Holiday"
-      }
-    ]
-  },
-  "6_5_2026": {
-    "event": [
-      {
-        "type": "event",
-        "desc": "Last working Day -B.Tech - I,II,III,IV / M.Tech (Int) - I,II,III,IV,V / M.Tech - I,II (Year)"
-      }
-    ]
-  },
-  "28_5_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Bakrid - Holiday"
-      }
-    ]
-  },
-  "26_6_2026": {
-    "event": [
-      {
-        "type": "holiday",
-        "desc": "Muharram - Holiday"
-      }
-    ]
-  }
+CALENDAR_DATA = {
+  "1_1_2026": {"event": [{"type": "holiday", "desc": "New Year’s Day - Holiday"}]},
+  "3_1_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "4_1_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "5_1_2026": {"event": [{"type": "event", "desc": "Enrolment Day - B.Tech - I,II,III,IV / M.Tech (Int) - I,II,III,IV,V / M.Tech - I,II (Year)"}]},
+  "6_1_2026": {"event": [{"type": "event", "desc": "Commencement of Classes for - B.Tech - I,II,III,IV / M.Tech (Int) - I,II,III,IV,V / M.Tech - I,II (Year)"}]},
+  "6_1_2026": {"event": [{"type": "holiday", "desc": "classes suspended due to university exams"}]},
+  "7_1_2026": {"event": [{"type": "holiday", "desc": "classes suspended due to university exams"}]},
+  "10_1_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "11_1_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "15_1_2026": {"event": [{"type": "holiday", "desc": "Pongal - Holiday"}]},
+  "16_1_2026": {"event": [{"type": "holiday", "desc": "Thiruvalluvar Day - Holiday"}]},
+  "17_1_2026": {"event": [{"type": "holiday", "desc": "Uzhavar Thirunal - Holiday"}, {"type": "holiday", "desc": "Weekend Holiday"}]},
+  "18_1_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "24_1_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "25_1_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "26_1_2026": {"event": [{"type": "holiday", "desc": "Republic Day - Holiday"}]},
+  "31_1_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "1_2_2026": {"event": [{"type": "holiday", "desc": "Thaipoosam - Holiday"}, {"type": "holiday", "desc": "Weekend Holiday"}]},
+  "7_2_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "8_2_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "14_2_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "15_2_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "21_2_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "22_2_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "28_2_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "1_3_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "4_3_2026": {"event": [{"type": "holiday", "desc": "Holi - Holiday"}]},
+  "7_3_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "8_3_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "14_3_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "15_3_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "19_3_2026": {"event": [{"type": "holiday", "desc": "Telugu New Year’s Day - Holiday"}]},
+  "21_3_2026": {"event": [{"type": "holiday", "desc": "Ramzan - Holiday"}, {"type": "holiday", "desc": "Weekend Holiday"}]},
+  "22_3_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "28_3_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "29_3_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "31_3_2026": {"event": [{"type": "holiday", "desc": "Mahaveer Jayanthi - Holiday"}]},
+  "3_4_2026": {"event": [{"type": "holiday", "desc": "Good Friday - Holiday"}]},
+  "4_4_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "5_4_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "11_4_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "12_4_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "14_4_2026": {"event": [{"type": "holiday", "desc": "Tamil New Year’s Day / Dr. B.R. Ambedkar's Birthday - Holiday"}]},
+  "18_4_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "19_4_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "25_4_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "26_4_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "1_5_2026": {"event": [{"type": "holiday", "desc": "May Day - Holiday"}]},
+  "2_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "3_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "6_5_2026": {"event": [{"type": "event", "desc": "Last working Day -B.Tech - I,II,III,IV / M.Tech (Int) - I,II,III,IV,V / M.Tech - I,II (Year)"}]},
+  "9_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "10_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "16_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "17_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "23_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "24_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "28_5_2026": {"event": [{"type": "holiday", "desc": "Bakrid - Holiday"}]},
+  "30_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "31_5_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "6_6_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "7_6_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "13_6_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "14_6_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "20_6_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "21_6_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+  "26_6_2026": {"event": [{"type": "holiday", "desc": "Muharram - Holiday"}]}
 }
 
 
