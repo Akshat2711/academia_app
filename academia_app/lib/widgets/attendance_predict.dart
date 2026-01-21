@@ -30,6 +30,7 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
   final TimetableService _timetableService = TimetableService();
   // Using _enrichedCourses to hold combined data from attendance and timetable
   List<Map<String, dynamic>> _enrichedCourses = []; 
+  Set<String> _optionalClassIds = {}; // Track optional classes
   
   DateTime? _startDate;
   DateTime? _endDate;
@@ -47,7 +48,22 @@ class _AttendancePredictorState extends State<AttendancePredictor> {
   Future<void> _loadData() async {
     await _timetableService.loadTimetable();
     await _loadCalendarData();
+    await _loadOptionalClasses();
     await _loadAndEnrichCourses();
+  }
+
+  Future<void> _loadOptionalClasses() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String>? savedOptionals = prefs.getStringList('optional_classes_prefs');
+      if (savedOptionals != null) {
+        setState(() {
+          _optionalClassIds = savedOptionals.toSet();
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading optional classes: $e');
+    }
   }
 
   Future<void> _loadAndEnrichCourses() async {
@@ -252,6 +268,12 @@ Map<String, int> _countClassesPerCourse(List<int> dayOrders) {
         final slot = course['slot'] ?? '';
         
         if (title.isEmpty) continue;
+        
+        // Check if this class is marked as optional and skip if it is
+        final classId = "${dayOrder}_${scheduledSlot}";
+        if (_optionalClassIds.contains(classId)) {
+          continue; // Skip optional classes from prediction
+        }
         
         final key = '$title|$category|$slot';
         final courseSlotClean = slot.replaceAll(RegExp(r'-+$'), '').trim();

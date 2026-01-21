@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../components/subject_info.dart';
 import '../components/faculty_info.dart';
 import '../screens/login_page.dart';
+//user_data_refresh service
+import '../services/user_data_refresh.dart';
 
 
 //profile card
 import '../widgets/profile_card_widget.dart';
 
-//FOR BACKUP DAYORDER
-import '../utils/day_order_backup.dart';
+
 
 //for loading animation
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
@@ -81,110 +81,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _refreshData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('userEmail');
-      final password = prefs.getString('userPassword');
-      
-      if (email == null || password == null) {
+      // CALL REFRESH SERVICE
+      final success = await DataRefreshService.refreshData();
+
+      if (!success) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Unable to refresh: credentials not found')),
+            const SnackBar(content: Text('Unable to refresh')),
           );
         }
         return;
       }
 
-      final url = Uri.parse('https://academia-scrapper-api-fast.onrender.com/scrape');
-      final body = jsonEncode({
-        "email": email,
-        "password": password,
+      // 🔄 Reset state to force UI rebuild 
+      setState(() {
+        studentInfo = null;
+        _overallAttendance = 0.0;
+        _courseCount = 0;
+        _totalCredits = 0;
+        _courses = [];
+        _advisors = {};
+        _lastRefreshText = '';
+        _loading = true;
       });
 
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: body,
-      );
+      // reload data from SharedPreferences
+      await _loadUserData();
+      widget.onDataRefreshed?.call();
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        //FOR BACKUP HANDLING/////////////////////////
-
-        // ✅ Handle day order (from API or backup)
-        int? dayOrder;
-        if (data['attendance'] != null && data['attendance']['day_order'] != null) {
-          // Day order present in API response
-          dayOrder = data['attendance']['day_order'] as int;
-          print('✅ Day order from API: $dayOrder');
-          
-          // Save day order with forecast
-          await DayOrderManager.saveDayOrderData(
-            currentDayOrder: dayOrder,
-            currentDate: DateTime.now(),
-          );
-        } else {
-          // Day order missing from API, use backup
-          print('⚠️ Day order missing from API response');
-          dayOrder = await DayOrderManager.getCurrentDayOrder();
-          
-          if (dayOrder != null) {
-            print('✅ Using backup day order: $dayOrder');
-            // Add day order to data for dashboard
-            data['attendance'] = data['attendance'] ?? {};
-            data['attendance']['day_order'] = dayOrder;
-          } else {
-            print('⚠️ No backup day order available');
-          }
-        }
-
-        /////////////////////////////////////
-
-        
-        // Save updated data
-        await prefs.setString('userData', jsonEncode(data));
-        
-        // Update last refresh time
-        final now = DateTime.now().toIso8601String();
-        await prefs.setString('lastRefreshTime', now);
-        
-        // **KEY CHANGE: Reset all state variables to trigger complete rebuild**
-        setState(() {
-          studentInfo = null;
-          _overallAttendance = 0.0;
-          _courseCount = 0;
-          _totalCredits = 0;
-          _courses = [];
-          _advisors = {};
-          _lastRefreshText = '';
-          _loading = true;
-        });
-        
-        // Reload the data with complete UI rebuild
-        await _loadUserData();
-        
-        // Notify dashboard that data was refreshed
-        widget.onDataRefreshed?.call();
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Data refreshed successfully'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Something went wrong')),
-          );
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data refreshed successfully'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error refreshing data')),
+          const SnackBar(content: Text('Error refreshing data')),
         );
       }
     }
@@ -450,18 +386,20 @@ SliverPadding(
       if (_courses.isNotEmpty) ...[
         const SizedBox(height: 24),
         Text(
-          'Your Courses',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+            '  Your Courses',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 22),
         ..._courses.map((course) => SubjectInfo(course: course)),
       ],
 
       // Faculty Info
+      const SizedBox(height: 24),
       FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
       const SizedBox(height: 100),
     ]),

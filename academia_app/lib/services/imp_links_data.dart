@@ -41,6 +41,14 @@ List<Map<String, String>> pass_imp_links() {
     },
 
     {
+      "title": "PreLab",
+      "desc": "Smart lab partner for SRMIST students",
+      "url": "https://prelab-prep.netlify.app/",
+      "official": "no"
+    },
+
+
+    {
       "title": "The Helpers",
       "desc": "Access semesters study materials and resources",
       "url": "https://thehelpers.vercel.app/",

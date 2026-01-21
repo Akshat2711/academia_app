@@ -36,11 +36,12 @@ class FacultyInfo extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
-            'Advisors',
+            ' Advisors',
             style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
               color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
             ),
           ),
         ),

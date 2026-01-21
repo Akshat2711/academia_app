@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
-
-// 🚀 IMPORTANT: Update this import path to match your file structure!
-import '../services/announcement_data.dart'; // Assuming the service is in this file or reachable
+import '../services/announcement_data.dart';
 
 // -------------------------------------------------------------------
 // ANNOUNCEMENT SCREEN (Stateful)
