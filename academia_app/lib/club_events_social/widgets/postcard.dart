@@ -206,7 +206,16 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
   }
 
   Future<void> _toggleLike() async {
-    if (_isLiking || _currentUserTruncatedEmail == null) return;
+    if (_isLiking || _currentUserTruncatedEmail == null){
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please log in to Like posts"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    };
     setState(() => _isLiking = true);
     try {
       final response = await _api.toggleLike(widget.post.postId, _currentUserTruncatedEmail!);

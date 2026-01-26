@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
-// Screens
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:academia_app/screens/cgpa_calculator.dart';
 
-//FOR IOS LIKE TRANSITION
-import 'package:flutter/cupertino.dart'; 
-
-// ============================================================================
-// MARKS STATISTICS WIDGET - Overall performance summary
-// ============================================================================
 class MarksStatsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> marks;
-  final Map<String, int>? courseCredits; // Map of course code to credits
+  final Map<String, int>? courseCredits;
 
   const MarksStatsWidget({
     super.key,
@@ -18,224 +13,209 @@ class MarksStatsWidget extends StatelessWidget {
     this.courseCredits,
   });
 
-  // Color palette matching the marks screen
-  static const Color _pitchBlack = Color(0xFF000000);
-  static const Color _neonGreen = Color.fromARGB(255, 31, 131, 13);
+  // Premium Green Palette (Deep Emerald)
+  static const Color _emeraldGreen = Color(0xFF1B5E20); 
+  static const Color _lightEmerald = Color(0xFF2E7D32); 
   static const Color _white = Colors.white;
-  
 
   @override
   Widget build(BuildContext context) {
+    // 1. Core Logic remains untouched
     final stats = _calculateStats();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 24),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        // 👇 NEW: Solid Neon Green Background
-        color: const Color.fromARGB(255, 75, 162, 59), 
-        borderRadius: BorderRadius.circular(20),
-        // Shadows REMOVED
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              children: [
-                Icon(Icons.analytics_rounded, color: _white, size: 28), // White icon
-                const SizedBox(width: 12),
-                Text(
-                  'Performance Overview',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: _white, // White text
-                    // Shadows REMOVED
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Stats Grid
-            Row(
-              children: [
-                // Overall Marks
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.auto_graph_rounded,
-                    label: 'Total Score',
-                    value: '${stats['obtainedMarks'].toStringAsFixed(1)}',
-                    subValue: '/ ${stats['maxMarks'].toStringAsFixed(0)}',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Percentage
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.percent_rounded,
-                    label: 'Percentage',
-                    value: '${stats['percentage'].toStringAsFixed(1)}%',
-                    subValue: '',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                // Expected CGPA
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.school_rounded,
-                    label: 'Est. CGPA',
-                    value: stats['cgpa'].toStringAsFixed(2),
-                    subValue: '/ 10.0',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Grade
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.grade_rounded,
-                    label: 'Grade',
-                    value: stats['grade'],
-                    subValue: '',
-                  ),
-                ),
-              ],
-            ),
-
-            // Note
-            if (stats['totalTests'] > 0) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  // Slightly transparent White for the note background
-                  color: _white.withOpacity(0.2), 
-                  borderRadius: BorderRadius.circular(12),
-                  // Border REMOVED
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 16, color: _white), // White icon
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Based on ${stats['totalTests']} test(s) across ${stats['totalCourses']} course(s)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _pitchBlack.withOpacity(0.8), // Dark text on bright background for readability
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // CGPA Calculator Button
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                   Navigator.push(
-                    context,
-                    CupertinoPageRoute(builder: (_) => const CGPACalculator()),
-                );
-                },
-                icon: const Icon(Icons.calculate_rounded, size: 20),
-                label: const Text(
-                  'Open Calculator',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 171, 245, 166).withOpacity(0.1),
-                  foregroundColor: _white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ),
-          ],
+        gradient: const LinearGradient(
+          colors: [_emeraldGreen, _lightEmerald],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required String subValue,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        // Stat card background is a lighter shade of green or transparent
-        color: const Color.fromARGB(255, 171, 245, 166).withOpacity(0.1), 
-        borderRadius: BorderRadius.circular(16),
-        // Shadows REMOVED
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: _emeraldGreen.withOpacity(0.25),
+            blurRadius: 25,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: _white, size: 20), // White icon
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: _white.withOpacity(0.8), // Lighter label
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
+          // Header Row: Percentage and Title
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: _white, // Main value in White
-                  // Shadows REMOVED
-                ),
-              ),
-              if (subValue.isNotEmpty) ...[
-                const SizedBox(width: 2),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(
-                    subValue,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ACADEMIC PERFORMANCE',
                     style: TextStyle(
-                      fontSize: 13,
-                      color: _white.withOpacity(0.7), // Lighter sub-text
-                      fontWeight: FontWeight.w500,
+                      color: _white.withOpacity(0.5),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        stats['percentage'].toStringAsFixed(1),
+                        style: const TextStyle(
+                          color: _white,
+                          fontSize: 48,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1.5,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '%',
+                        style: TextStyle(
+                          color: _white.withOpacity(0.4),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  shape: BoxShape.circle,
                 ),
-              ],
+                child: const Icon(Icons.bar_chart_rounded, color: _white, size: 22),
+              ),
             ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Glass Stats Bar (Functionality: CGPA, Score, Grade)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.06)),
+            ),
+            child: Row(
+              children: [
+                _buildStat('EST. CGPA', stats['cgpa'].toStringAsFixed(2)),
+                _buildVerticalDivider(),
+                _buildStat('SCORE', '${stats['obtainedMarks'].toStringAsFixed(0)}/${stats['maxMarks'].toStringAsFixed(0)}'),
+                _buildVerticalDivider(),
+                _buildStat('GRADE', stats['grade']),
+              ],
+            ),
+          ),
+
+          // Information Note (Logic from your original code)
+          if (stats['totalTests'] > 0) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, size: 14, color: _white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Based on ${stats['totalTests']} test(s) across ${stats['totalCourses']} course(s)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: _white.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          // Nav Button (Functionality: Navigation to Calculator)
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact(); // Added tactile feedback
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(builder: (_) => const CGPACalculator()),
+                );
+              },
+              icon: const Icon(Icons.calculate_rounded, size: 18, color: Colors.white),
+              label: const Text(
+                'Open CGPA Calculator',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 195, 190, 190).withOpacity(0.1),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // --- Calculation Methods ---
+  Widget _buildStat(String label, String val) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            val,
+            style: const TextStyle(color: _white, fontSize: 16, fontWeight: FontWeight.w800),
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: _white.withOpacity(0.35),
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerticalDivider() {
+    return Container(height: 18, width: 1, color: Colors.white.withOpacity(0.1));
+  }
+
+  // ===========================================================================
+  // --- CORE LOGIC FOR STATS CALCULATION ---
+  // ===========================================================================
 
   Map<String, dynamic> _calculateStats() {
     double totalObtained = 0;
@@ -245,66 +225,52 @@ class MarksStatsWidget extends StatelessWidget {
     double totalCredits = 0;
 
     for (final course in marks) {
-      final tests = course['tests'] as List<Map<String, dynamic>>;
-      
+      final tests = course['tests'] as List;
       if (tests.isEmpty) continue;
 
-      // Calculate course total (sum of all tests in the course)
       double courseObtained = 0;
       double courseMax = 0;
       
       for (final test in tests) {
-        final obtained = (test['obtained'] as num).toDouble();
-        final max = (test['max'] as num).toInt();
-        courseObtained += obtained;
-        courseMax += max;
+        courseObtained += (test['obtained'] as num).toDouble();
+        courseMax += (test['max'] as num).toDouble();
         totalTests++;
       }
 
       totalObtained += courseObtained;
       totalMax += courseMax;
 
-      // Calculate grade points for this course based on marks cut
       if (courseMax > 0) {
         final marksCut = courseMax - courseObtained;
         final gradePoint = _marksCutToGradePoint(marksCut);
-        
-        // Try to get credits for this course
-        int credits = 3; // Default credits
-        if (courseCredits != null) {
-          final courseTitle = course['title'] as String;
-          credits = courseCredits![courseTitle] ?? 3;
-        }
-        
+        int credits = courseCredits?[course['title']] ?? 3;
         weightedGradePoints += gradePoint * credits;
-        totalCredits += credits;
+        totalCredits += credits.toDouble();
       }
     }
 
     final percentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0.0;
     final cgpa = totalCredits > 0 ? weightedGradePoints / totalCredits : 0.0;
-    final grade = _percentageToGrade(percentage);
 
     return {
       'obtainedMarks': totalObtained,
       'maxMarks': totalMax,
       'percentage': percentage,
       'cgpa': cgpa,
-      'grade': grade,
+      'grade': _percentageToGrade(percentage),
       'totalTests': totalTests,
       'totalCourses': marks.length,
     };
   }
 
-  // New method: Calculate grade point based on marks cut in a subject
   double _marksCutToGradePoint(double marksCut) {
-    if (marksCut < 10) return 10.0;  // O grade if less than 10 marks cut
-    if (marksCut < 20) return 9.0;   // A+ if 10-19 marks cut
-    if (marksCut < 30) return 8.0;   // A if 20-29 marks cut
-    if (marksCut < 40) return 7.0;   // B+ if 30-39 marks cut
-    if (marksCut < 45) return 6.0;   // B if 40-44 marks cut
-    if (marksCut < 50) return 5.0;   // C if 45-49 marks cut
-    return 0.0;                       // F if 50+ marks cut
+    if (marksCut < 10) return 10.0;
+    if (marksCut < 20) return 9.0;
+    if (marksCut < 30) return 8.0;
+    if (marksCut < 40) return 7.0;
+    if (marksCut < 45) return 6.0;
+    if (marksCut < 50) return 5.0;
+    return 0.0;
   }
 
   String _percentageToGrade(double percentage) {

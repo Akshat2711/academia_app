@@ -120,17 +120,18 @@ class CourseAttendanceCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                course['title'],
-                style: const TextStyle(
-                  color: _white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+             Text(
+              (course['title'].length > 22)
+                  ? course['title'].substring(0, 22) + '...'
+                  : course['title'],
+              style: const TextStyle(
+                color: _white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
               ),
+            )
+,
               const SizedBox(height: 2),
               Text(
                 course['category'].toString().toUpperCase(),
@@ -148,7 +149,7 @@ class CourseAttendanceCard extends StatelessWidget {
         Text(
           '${percentage.toStringAsFixed(1)}%',
           style: TextStyle(
-            color: statusColor,
+            color: Colors.white.withOpacity(0.9),
             fontWeight: FontWeight.w900,
             fontSize: 22,
           ),

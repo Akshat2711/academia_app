@@ -59,7 +59,19 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _handlePublish() async {
-    if (_contentController.text.trim().isEmpty) return;
+    //warning snackbars
+    if (_contentController.text.trim().isEmpty){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Post content cannot be empty")));
+      return;}
+    if(!_isIndividual && (_clubIdController.text.trim().isEmpty || _clubPassController.text.trim().isEmpty)){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Club ID and Password are required for club posts")));
+      return;
+    }
+    if(_truncatedUserEmail == "user"){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Login required to create posts")));
+      return;
+    }
+    /////////////////////////////////////////////////
 
     setState(() => _isUploading = true);
     try {
@@ -74,7 +86,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Something went wrong!(check club credentials if posting as club)")));
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
@@ -105,6 +117,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: _isUploading
                 ? const SizedBox(
+                    height: 20, 
                     width: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,

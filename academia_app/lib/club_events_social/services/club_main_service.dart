@@ -95,6 +95,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> toggleSubscription(String clubId, String email) async {
+    print("Toggling subscription for clubId: $clubId, email: $email");
     final response = await http.post(
       Uri.parse('$baseUrl/clubs/$clubId/subscribe'),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},

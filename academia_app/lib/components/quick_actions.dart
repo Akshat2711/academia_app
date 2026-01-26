@@ -16,10 +16,8 @@ class QuickActions extends StatelessWidget {
   final Color primaryColor;
   const QuickActions({super.key, required this.primaryColor});
 
-  // Minimalist Theme Constants
-  static const Color cardBg = Color(0xFF121212); // Deep Charcoal (Cleaner than pure black)
-  static const Color borderCol = Color(0xFF252525); // Subtle elevation stroke
-  static const double radius = 24.0;
+  static const Color cardBg = Color(0xFF121212);
+  static const double radius = 30.0;
 
   @override
   Widget build(BuildContext context) {
@@ -39,40 +37,38 @@ class QuickActions extends StatelessWidget {
           ),
         ),
 
-
-      // --- SECTION 0: RESULT BANNER ---
-         _buildBanner(
+        // --- SECTION 0: BANNERS ---
+        _buildBanner(
           context,
-          icon: Icons.school_rounded,
-          title: 'semester results',
-          subtitle: 'see your semester results',
-          color: const Color.fromARGB(255, 175, 240, 150),
+          icon: Icons.auto_graph_rounded, // Better: Graph for results
+          title: 'Semester Results',
+          subtitle: 'Detailed breakdown of your grades',
+          color: const Color(0xFFAFF096),
           target: const MainPortalPage(),
         ),
         const SizedBox(height: 12),
-              // --- SECTION 0: RESULT BANNER ---
-         _buildBanner(
+        _buildBanner(
           context,
-          icon: Icons.people_rounded,
-          title: 'Social Space',
-          subtitle: 'Checkout campus feed,clubs and more',
-          color: const Color.fromARGB(255, 101, 171, 232),
+          icon: Icons.auto_awesome_mosaic_rounded, // Better: Mosaic for social/feed
+          title: 'Social Space (Beta)',
+          subtitle: 'Checkout campus feed, clubs and more',
+          color: const Color(0xFF65ABE8),
           target: const FeedScreen(),
         ),
         const SizedBox(height: 12),
 
-        // --- SECTION 1: BENTO GRID (Flexible Heights) ---
-        IntrinsicHeight( // Ensures both columns match height automatically
+        // --- SECTION 1: BENTO GRID ---
+        IntrinsicHeight(
           child: Row(
             children: [
               Expanded(
                 flex: 5,
                 child: _buildActionCard(
                   context,
-                  icon: Icons.menu_book_rounded,
+                  icon: Icons.note_alt, // Better: Layers for materials
                   title: 'Study\nMaterial',
                   subtitle: 'Notes & PYQs',
-                  color: Colors.orange,
+                  color: Colors.orangeAccent,
                   target: const MaterialsScreen(),
                 ),
               ),
@@ -83,7 +79,7 @@ class QuickActions extends StatelessWidget {
                   children: [
                     _buildSmallCard(
                       context,
-                      icon: Icons.calendar_today_rounded,
+                      icon: Icons.event_repeat_rounded, // Better: Repeating event icon
                       title: 'Calendar',
                       color: const Color(0xFFE96BAE),
                       target: const CalendarScreen(),
@@ -91,11 +87,10 @@ class QuickActions extends StatelessWidget {
                     const SizedBox(height: 12),
                     _buildSmallCard(
                       context,
-                      icon: Icons.chat_bubble_outline_rounded,
+                      icon: Icons.explore_rounded, // Better: Compass/Explore for nearby
                       title: 'Nearby',
                       color: Colors.white,
                       target: const NearbyChatScreen(),
-                     
                     ),
                   ],
                 ),
@@ -103,82 +98,80 @@ class QuickActions extends StatelessWidget {
             ],
           ),
         ),
-
         const SizedBox(height: 12),
 
-        // --- SECTION 2: ANNOUNCEMENT BANNER ---
+        // --- SECTION 2: ANNOUNCEMENT ---
         _buildBanner(
           context,
-          icon: Icons.announcement_rounded,
+          icon: Icons.notifications_active_rounded,
           title: 'Campus Announcements',
           subtitle: 'Latest news and official updates',
           color: const Color(0xFF4ACDF5),
           target: const AnnouncementScreen(),
         ),
-
         const SizedBox(height: 12),
 
         // --- SECTION 3: UTILITY ROW ---
         Row(
           children: [
-            _buildUtilityTile(context, Icons.calculate_rounded, 'CGPA', const Color(0xFFFD3974), const CGPACalculator()),
+            _buildUtilityTile(context, Icons.analytics_outlined, 'CGPA', const Color(0xFFFD3974), const CGPACalculator()),
             const SizedBox(width: 12),
-            _buildUtilityTile(context, Icons.restaurant_rounded, 'Mess', const Color(0xFF9DF8A0), const MessMenuScreen()),
+            _buildUtilityTile(context, Icons.fastfood_rounded, 'Mess', const Color(0xFF9DF8A0), const MessMenuScreen()),
             const SizedBox(width: 12),
-            _buildUtilityTile(context, Icons.link_rounded, 'Links', const Color(0xFF61A5DD), const LinksScreen()),
+            _buildUtilityTile(context, Icons.link_sharp, 'Links', const Color(0xFF61A5DD), const LinksScreen()),
           ],
         ),
-        const SizedBox(height: 20),
       ],
     );
   }
 
-  // Large Bento Item
+  // Helper to build the Circular Background Effect
+  Widget _buildIconHalo(IconData icon, Color color, double size) {
+    return Container(
+      padding: EdgeInsets.all(size * 0.4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.04), // Subtle Halo
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: color, size: size),
+    );
+  }
+
+  // --- REFACTORED CARD WIDGETS ---
+
   Widget _buildActionCard(BuildContext context, {required IconData icon, required String title, required String subtitle, required Color color, required Widget target}) {
     return GestureDetector(
       onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => target)),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(radius),
-        ),
+        decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(radius)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 30),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, height: 1.2)),
-                Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11)),
-              ],
-            ),
+            _buildIconHalo(icon, color, 24),
+            const Spacer(),
+            Text(title, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, height: 1.2)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 11)),
           ],
         ),
       ),
     );
   }
 
-  // Small Bento Item
-  Widget _buildSmallCard(BuildContext context, {required IconData icon, required String title, required Color color, required Widget target, bool isGlass = false}) {
+  Widget _buildSmallCard(BuildContext context, {required IconData icon, required String title, required Color color, required Widget target}) {
     return Expanded(
       child: GestureDetector(
         onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => target)),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: isGlass ? Colors.white.withOpacity(0.05) : cardBg,
-            borderRadius: BorderRadius.circular(radius - 4),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(radius - 4)),
           child: Row(
             children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 12),
-              Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+              _buildIconHalo(icon, color, 16),
+              const SizedBox(width: 10),
+              Flexible(child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
             ],
           ),
         ),
@@ -186,23 +179,15 @@ class QuickActions extends StatelessWidget {
     );
   }
 
-  // Wide Banner
   Widget _buildBanner(BuildContext context, {required IconData icon, required String title, required String subtitle, required Color color, required Widget target}) {
     return GestureDetector(
       onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => target)),
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(radius),
-        ),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(radius)),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color.fromARGB(237, 66, 68, 68).withOpacity(0.1), shape: BoxShape.circle),
-              child: Icon(icon, color: color, size: 22),
-            ),
+            _buildIconHalo(icon, color, 20),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -220,21 +205,17 @@ class QuickActions extends StatelessWidget {
     );
   }
 
-  // Compact Bottom Row
   Widget _buildUtilityTile(BuildContext context, IconData icon, String title, Color color, Widget target) {
     return Expanded(
       child: GestureDetector(
         onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => target)),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(20),
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(30)),
           child: Column(
             children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(height: 8),
+              _buildIconHalo(icon, color, 20),
+              const SizedBox(height: 10),
               Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
             ],
           ),

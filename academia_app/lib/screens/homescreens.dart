@@ -339,18 +339,18 @@ SliverPadding(
       Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          color: const Color.fromARGB(23, 107, 106, 106),
+          borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
           children: [
-            Icon(Icons.info_outline, color: const Color.fromARGB(255, 166, 171, 181), size: 20),
+            Icon(Icons.info_outline, color: const Color.fromARGB(255, 62, 62, 62), size: 20),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Tip: Pull down from the top to refresh data.',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: const Color.fromARGB(255, 62, 62, 62),
                   fontSize: 14,
                 ),
               ),
@@ -386,7 +386,7 @@ SliverPadding(
 
       // Courses Section
       if (_courses.isNotEmpty) ...[
-        const SizedBox(height: 24),
+        const SizedBox(height: 30),
         Text(
             '  Your Courses',
             style: TextStyle(

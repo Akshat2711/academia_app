@@ -92,9 +92,9 @@ class _SlidingProfileAnnouncementWidgetState
     }
   }
 
-void _startAutoSlide() {
-    // I increased the time slightly to 8 seconds to allow for reading
-    _timer = Timer.periodic(const Duration(seconds: 8), (timer) {
+  void _startAutoSlide() {
+    // REDUCED: From 8s to 4s for faster cycling
+    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (_pageController.hasClients) {
         final currentPage = _pageController.page?.round() ?? 0;
         
@@ -102,38 +102,33 @@ void _startAutoSlide() {
           // Slide: Profile -> Announcement
           _pageController.animateToPage(
             1,
-            duration: const Duration(milliseconds: 800), // Slower, smoother slide
-            curve: Curves.easeInOutCubic, // Smoother curve
+            duration: const Duration(milliseconds: 450), // SNAPPIER: Fast slide
+            curve: Curves.easeOutQuart, // Faster finish curve
           );
         } else {
-          // We are on the announcement page
           final announcements = _announcementsData?.entries.toList() ?? [];
           if (announcements.isNotEmpty) {
-            
-            // Check if we are at the end of the announcements list
             if (_currentAnnouncementIndex >= announcements.length - 1) {
-              // Reset index to 0
               setState(() {
                 _currentAnnouncementIndex = 0;
               });
               // Slide: Announcement -> Profile
               _pageController.animateToPage(
                 0,
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeInOutCubic,
+                duration: const Duration(milliseconds: 450),
+                curve: Curves.easeOutQuart,
               );
             } else {
-              // Just switch to the next announcement (AnimatedSwitcher handles the fade)
+              // Internal Fade: Announcement X -> Announcement Y
               setState(() {
                 _currentAnnouncementIndex++;
               });
             }
           } else {
-            // No announcements, go back to profile
             _pageController.animateToPage(
               0,
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeInOutCubic,
+              duration: const Duration(milliseconds: 450),
+              curve: Curves.easeOutQuart,
             );
           }
         }
@@ -193,18 +188,12 @@ void _startAutoSlide() {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFFF9900), Color(0xFFFF6F00)],
+            colors: [Color.fromARGB(252, 238, 161, 47), Color.fromARGB(255, 221, 139, 76)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF6F00).withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(30),
+          
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,7 +204,7 @@ void _startAutoSlide() {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   child: const Icon(Icons.person, color: Colors.white, size: 32),
                 ),
@@ -262,7 +251,7 @@ Widget _buildAnnouncementCard() {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: Colors.grey[900],
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(30),
         ),
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
@@ -289,11 +278,16 @@ Widget _buildAnnouncementCard() {
 
     // WRAP IN ANIMATED SWITCHER
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 800), // Smooth 800ms transition
+      duration: const Duration(milliseconds: 400), // Smooth 800ms transition
       switchInCurve: Curves.easeInOut,
       switchOutCurve: Curves.easeInOut,
       transitionBuilder: (Widget child, Animation<double> animation) {
-        return FadeTransition(opacity: animation, child: child);
+        return FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+          child: child,
+        ));
       },
       // The child is your Container. 
       // IMPORTANT: The Key must change for animation to trigger.
@@ -311,7 +305,7 @@ Widget _buildAnnouncementCard() {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(30),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -334,7 +328,7 @@ Widget _buildAnnouncementCard() {
                     return Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                          colors: [Color.fromARGB(255, 35, 35, 35), Color.fromARGB(255, 13, 13, 13)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -346,7 +340,7 @@ Widget _buildAnnouncementCard() {
                 Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                      colors: [Color.fromARGB(255, 35, 35, 35), Color.fromARGB(255, 13, 13, 13)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -436,7 +430,7 @@ Widget _buildAnnouncementCard() {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(30),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.2),

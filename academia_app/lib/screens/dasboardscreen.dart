@@ -68,8 +68,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Container(
           height: 65,
           decoration: BoxDecoration(
-            color: const Color(0xFF121212), // Solid dark matte
-            borderRadius: BorderRadius.circular(25),
+            color: const Color.fromARGB(220, 18, 18, 18), // Solid dark matte
+            borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.4),

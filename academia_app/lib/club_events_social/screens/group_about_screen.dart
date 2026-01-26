@@ -96,8 +96,17 @@ class _ClubDetailsScreenState extends State<ClubDetailsScreen> {
   String _truncateEmail(String email) => email.contains('@') ? email.split('@')[0] : email;
 
   Future<void> _handleToggleSubscribe() async {
-    if (_currentUserTruncatedEmail == null || _isProcessing) return;
-
+    
+    if (_currentUserTruncatedEmail == null || _isProcessing) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please log in to Subscribe"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    
     setState(() => _isProcessing = true);
     try {
       final response = await widget.apiService.toggleSubscription(
@@ -276,22 +285,49 @@ class _ClubDetailsScreenState extends State<ClubDetailsScreen> {
     );
   }
 
-  Widget _buildClubHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.club.name,
-          style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold, letterSpacing: -0.8),
+Widget _buildClubHeader() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.club.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.8,
+            ),
+          ),
+
+          const SizedBox(width: 6),
+
+          // Verified Badge (Instagram/Facebook style)
+          Container(
+            width: 20,
+            height: 20,
+            child: const Icon(Icons.verified, color: Colors.blueAccent, size: 16)
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 4),
+
+      Text(
+        "@${widget.club.name}",
+        style: const TextStyle(
+          color: Colors.white38,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
         ),
-        const SizedBox(height: 4),
-        Text(
-          "Official Student Organization".toUpperCase(),
-          style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.2),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
+
 
   Widget _buildStatsRow() {
     return Row(

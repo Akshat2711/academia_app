@@ -38,7 +38,7 @@ class StatsBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
           color: const Color(0xFF121212),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.4),
@@ -70,7 +70,7 @@ class StatsBar extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: color,
               letterSpacing: -0.5,
@@ -78,7 +78,7 @@ class StatsBar extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            label.toUpperCase(),
+            label,
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,

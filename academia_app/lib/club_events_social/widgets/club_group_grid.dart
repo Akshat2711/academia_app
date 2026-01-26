@@ -187,7 +187,16 @@ class _ModernClubCardState extends State<_ModernClubCard> {
   }
 
   Future<void> _handleToggleSubscribe() async {
-    if (_currentUserTruncatedEmail == null || _isProcessing) return;
+    
+    if (_currentUserTruncatedEmail == null || _isProcessing) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please log in to Subscribe"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isProcessing = true);
     try {
