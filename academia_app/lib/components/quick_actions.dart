@@ -9,6 +9,8 @@ import '../screens/imp_links_screen.dart';
 import '../screens/studymaterial_screen.dart';
 import '../screens/mess_menu_screen.dart';
 import '../screens/nearby_chat_screen.dart';
+import '../screens/student_portal_screen.dart';
+import '../club_events_social/screens/feed_screen.dart';
 
 class QuickActions extends StatelessWidget {
   final Color primaryColor;
@@ -36,6 +38,28 @@ class QuickActions extends StatelessWidget {
             ),
           ),
         ),
+
+
+      // --- SECTION 0: RESULT BANNER ---
+         _buildBanner(
+          context,
+          icon: Icons.school_rounded,
+          title: 'semester results',
+          subtitle: 'see your semester results',
+          color: const Color.fromARGB(255, 175, 240, 150),
+          target: const MainPortalPage(),
+        ),
+        const SizedBox(height: 12),
+              // --- SECTION 0: RESULT BANNER ---
+         _buildBanner(
+          context,
+          icon: Icons.people_rounded,
+          title: 'Social Space',
+          subtitle: 'Checkout campus feed,clubs and more',
+          color: const Color.fromARGB(255, 101, 171, 232),
+          target: const FeedScreen(),
+        ),
+        const SizedBox(height: 12),
 
         // --- SECTION 1: BENTO GRID (Flexible Heights) ---
         IntrinsicHeight( // Ensures both columns match height automatically

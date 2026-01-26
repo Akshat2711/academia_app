@@ -291,7 +291,7 @@ class _NearbyChatScreenState extends State<NearbyChatScreen> with WidgetsBinding
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.delete, color: kWarningRed, size: 18),
+                  Icon(Icons.delete, color: Color.fromARGB(255, 181, 178, 178), size: 18),
                   Text("Clear", style: TextStyle(color: Color.fromARGB(255, 240, 228, 228), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
                 ],
               ),
@@ -466,7 +466,7 @@ class _NearbyChatScreenState extends State<NearbyChatScreen> with WidgetsBinding
             const Text(
               "This is a local peer-to-peer network. By using this service, you agree to:\n\n"
               "• Not transmit harmful, offensive, or illegal content.\n"
-              "• Respect the privacy of others nearby.\n"
+              "• Sometimes it may not work as expected,waiting for sometime may resolve the issue.\n"
               "• Your Email ID is used solely for identification\n",
               style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.6),
             ),

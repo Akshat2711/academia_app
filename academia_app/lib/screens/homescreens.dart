@@ -20,6 +20,8 @@ import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 import '../components/stats_bar.dart';
 //quick actions component
 import '../components/quick_actions.dart';
+//for contacting support
+import '../components/contact_us.dart';
 
 
 // ============================================================================
@@ -401,6 +403,8 @@ SliverPadding(
       // Faculty Info
       const SizedBox(height: 24),
       FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
+      // Contact Support Section
+      ContactUs(),
       const SizedBox(height: 100),
     ]),
   ),
