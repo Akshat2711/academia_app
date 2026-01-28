@@ -1,9 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:academia_app/club_events_social/services/club_main_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+// Import your camera manager
+import '../utils/camera_manager.dart';
 
 // Premium Monochrome Palette
 const Color kPureBlack = Color(0xFF000000);
@@ -58,21 +62,67 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  Future<void> _handlePublish() async {
-    //warning snackbars
-    if (_contentController.text.trim().isEmpty){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Post content cannot be empty")));
-      return;}
-    if(!_isIndividual && (_clubIdController.text.trim().isEmpty || _clubPassController.text.trim().isEmpty)){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Club ID and Password are required for club posts")));
-      return;
-    }
-    if(_truncatedUserEmail == "user"){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Login required to create posts")));
-      return;
-    }
-    /////////////////////////////////////////////////
+  /// THE CONFIRMATION DIALOG
+  Future<void> _showConfirmationDialog() async {
+    return showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => AlertDialog(
+        backgroundColor: kCardGrey,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text(
+          "Submit for Review?",
+          style: TextStyle(color: kAccentWhite, fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          _isIndividual 
+            ? "Your post will be reviewed by administrators before becoming visible to the community. This usually takes less than 24 hours."
+            : "Posting as a Club will notify all subscribers immediately. Please ensure content accuracy.",
+          style: const TextStyle(color: kMutedWhite, fontSize: 14, height: 1.5),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("CANCEL", style: TextStyle(color: kMutedWhite, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _performUpload();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kAccentWhite,
+              foregroundColor: kPureBlack,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            ),
+            child: const Text("CONFIRM & POST", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Future<void> _handlePublish() async {
+    // Validation Logic
+    if (_contentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Post content cannot be empty")));
+      return;
+    }
+    if (!_isIndividual && (_clubIdController.text.trim().isEmpty || _clubPassController.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Club credentials required")));
+      return;
+    }
+    if (_truncatedUserEmail == "user") {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please login to post")));
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+    _showConfirmationDialog();
+  }
+
+  Future<void> _performUpload() async {
     setState(() => _isUploading = true);
     try {
       await widget.apiService.createPost(
@@ -86,7 +136,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Something went wrong!(check club credentials if posting as club)")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Upload failed. Verify your club credentials or connection."))
+        );
+      }
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
@@ -106,56 +160,31 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         ),
         title: const Text(
           "New Post",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,         // match Mess Menu size
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: _isUploading
-                ? const SizedBox(
-                    height: 20, 
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
+                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : TextButton(
                     onPressed: _handlePublish,
                     style: TextButton.styleFrom(
                       backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
-                    child: const Text(
-                      "POST",
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
+                    child: const Text("POST", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
           ),
         ],
       ),
-
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            // --- Identity Switcher ---
             _buildIdentitySelector(),
-
             const SizedBox(height: 20),
-
-            // --- Club Admin Fields ---
             if (!_isIndividual) 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -167,8 +196,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   ],
                 ),
               ),
-
-            // --- Editor ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               child: TextField(
@@ -183,23 +210,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ),
               ),
             ),
-
-            // --- Media Strip ---
             if (_selectedImages.isNotEmpty) _buildImageStrip(),
-
             const SizedBox(height: 10),
-            _buildGhostButton(Icons.add_a_photo_outlined, "ATTACH MEDIA", _pickImages),
-
-            // --- Expiry / Duration Bar ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Expanded(child: _buildGhostButton(Icons.add_a_photo_outlined, "CAMERA", _captureFromCamera)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildGhostButton(Icons.photo_library_outlined, "GALLERY", _pickImages)),
+                ],
+              ),
+            ),
             _buildDurationControl(),
-
-            // --- Disclaimer Section ---
             _buildDisclaimer(),
-
-            // --- Register Club Prompt ---
-            // --- Club Registration Link ---
             _buildRegisterClubPrompt(),
-            
             const SizedBox(height: 60),
           ],
         ),
@@ -207,14 +232,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
+  // --- Helper Build Methods ---
+
   Widget _buildIdentitySelector() {
     return Container(
       height: 48,
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: kCardGrey,
-        borderRadius: BorderRadius.circular(30),
-      ),
+      decoration: BoxDecoration(color: kCardGrey, borderRadius: BorderRadius.circular(30)),
       child: Row(
         children: [
           _buildPill("INDIVIDUAL", _isIndividual, () => setState(() => _isIndividual = true)),
@@ -231,18 +255,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: active ? kSoftGrey : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),
-          ),
+          decoration: BoxDecoration(color: active ? kSoftGrey : Colors.transparent, borderRadius: BorderRadius.circular(30)),
           child: Center(
-            child: Text(label, 
-              style: TextStyle(
-                color: active ? kAccentWhite : kMutedWhite,
-                fontWeight: FontWeight.w900,
-                fontSize: 10,
-                letterSpacing: 1.5
-              )),
+            child: Text(label, style: TextStyle(color: active ? kAccentWhite : kMutedWhite, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.5)),
           ),
         ),
       ),
@@ -296,18 +311,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Widget _buildGhostButton(IconData icon, String label, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, color: kAccentWhite, size: 18),
-        label: Text(label, style: const TextStyle(color: kAccentWhite, fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 1)),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: kGlassWhite),
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          minimumSize: const Size(double.infinity, 50),
-        ),
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, color: kAccentWhite, size: 18),
+      label: Text(label, style: const TextStyle(color: kAccentWhite, fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 1)),
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: kGlassWhite),
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       ),
     );
   }
@@ -316,10 +327,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: kCardGrey,
-        borderRadius: BorderRadius.circular(30),
-      ),
+      decoration: BoxDecoration(color: kCardGrey, borderRadius: BorderRadius.circular(30)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -330,20 +338,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               Text("${_expiryDays.round()} DAYS", style: const TextStyle(color: kAccentWhite, fontWeight: FontWeight.w900, fontSize: 10)),
             ],
           ),
-          const SizedBox(height: 10),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: kAccentWhite,
-              inactiveTrackColor: kGlassWhite,
-              thumbColor: kAccentWhite,
-              trackHeight: 2,
-            ),
-            child: Slider(
-              value: _expiryDays,
-              min: 1,
-              max: 30,
-              onChanged: (v) => setState(() => _expiryDays = v),
-            ),
+          Slider(
+            value: _expiryDays,
+            min: 1,
+            max: 30,
+            activeColor: kAccentWhite,
+            inactiveColor: kGlassWhite,
+            onChanged: (v) => setState(() => _expiryDays = v),
           ),
         ],
       ),
@@ -353,89 +354,38 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget _buildDisclaimer() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      child: Column(
-        children: [
-          const Divider(color: kGlassWhite),
-          const SizedBox(height: 15),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.info_outline_rounded, color: kMutedWhite, size: 16),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  "By posting, you acknowledge that your user handle ($_truncatedUserEmail) will be logged. For security, only the original uploader or an official moderator can remove this post. Posts automatically expire and are deleted after the selected duration.",
-                  style: const TextStyle(color: kMutedWhite, fontSize: 11, height: 1.5, fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-        ],
+      child: Text(
+        "By posting, you acknowledge that $_truncatedUserEmail will be logged. Posts expire and are deleted automatically after the selected duration.",
+        style: const TextStyle(color: kMutedWhite, fontSize: 11, height: 1.5),
       ),
     );
   }
 
-
-////for club registration prompt
-Widget _buildRegisterClubPrompt() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-    child: InkWell(
-      onTap: () {
-        _launchUrl("https://console-x-academia.vercel.app/contactus");
-      },
-      borderRadius: BorderRadius.circular(30),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: kGlassWhite, // Subtle lift from the background
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: kGlassWhite),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "WANT TO POST AS A GROUP/CLUB?",
-              style: TextStyle(
-                color: kMutedWhite,
-                fontWeight: FontWeight.w900,
-                fontSize: 8,
-                letterSpacing: 1.2
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              "APPLY FOR ACCESS",
-              style: TextStyle(
-                color: kAccentWhite,
-                fontWeight: FontWeight.w900,
-                fontSize: 10,
-                letterSpacing: 1.2,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ],
+  Widget _buildRegisterClubPrompt() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: InkWell(
+        onTap: () => _launchUrl("https://console-x-academia.vercel.app/contactus"),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(color: kGlassWhite, borderRadius: BorderRadius.circular(30)),
+          child: const Center(
+            child: Text("WANT TO POST AS A CLUB? APPLY FOR ACCESS", style: TextStyle(color: kAccentWhite, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1)),
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  // Helper function to launch URLs
+  Future<void> _captureFromCamera() async {
+    final List<File> images = await MediaHelper.captureMultipleImagesFromCamera();
+    if (images.isNotEmpty) setState(() => _selectedImages.addAll(images));
+  }
+
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
-    if (!await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication, //Force open in browser
-    )) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open the link')),
-        );
-      }
-      print('Could not launch $url');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the link')));
     }
   }
-//////////////////////////////////////////////////////////////////////////
 }

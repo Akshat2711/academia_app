@@ -230,6 +230,7 @@ Widget _buildFilterBar() {
             _filterBubble('Groups'),
             const SizedBox(width: 10),
             _filterBubble('Bookmarks'),
+            const SizedBox(width: 10),
           ],
         ),
       ),

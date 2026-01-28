@@ -250,7 +250,7 @@ class _ModernClubCardState extends State<_ModernClubCard> {
           // Banner Background
           if (widget.club.bannerUrl != null && widget.club.bannerUrl!.isNotEmpty)
             ClipRRect(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(10),
               child: CachedNetworkImage(
                 imageUrl: widget.club.bannerUrl!,
                 fit: BoxFit.cover,
