@@ -45,8 +45,6 @@ dependencies:
   flutter_slidable: ^3.0.1
   #for graphs
   fl_chart: ^1.1.1
-  #for laoding animation
-  liquid_pull_to_refresh: ^3.0.0
   #for animations
   lottie: ^3.1.0
   #for nearby chat

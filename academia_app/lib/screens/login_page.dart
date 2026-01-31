@@ -38,84 +38,75 @@ class _CLoginPageState extends State<CLoginPage> {
     try {
       final response = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Content-Type": "application/json",
+          "accept": "application/json",
+        },
         body: body,
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        final prefs = await SharedPreferences.getInstance();
 
-        // ✅ Handle day order (from API or backup)
+        // 1. Save Credentials
+        await prefs.setString('userEmail', email);
+        await prefs.setString('userPassword', password);
+
+        // 2. Handle Day Order
+        // Logic points to: data['attendance']['day_order']
         int? dayOrder;
         if (data['attendance'] != null && data['attendance']['day_order'] != null) {
-          // Day order present in API response
           dayOrder = data['attendance']['day_order'] as int;
-          print('✅ Day order from API: $dayOrder');
-          
-          // Save day order with forecast
           await DayOrderManager.saveDayOrderData(
             currentDayOrder: dayOrder,
             currentDate: DateTime.now(),
           );
         } else {
-          // Day order missing from API, use backup
-          print('⚠️ Day order missing from API response');
+          // Fallback to backup if API misses it
           dayOrder = await DayOrderManager.getCurrentDayOrder();
-          
           if (dayOrder != null) {
-            print('✅ Using backup day order: $dayOrder');
-            // Add day order to data for dashboard
-            data['attendance'] = data['attendance'] ?? {};
+            data['attendance'] ??= {};
             data['attendance']['day_order'] = dayOrder;
-          } else {
-            print('⚠️ No backup day order available');
           }
         }
 
-        // Save user data to SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
+        // 3. Save EVERYTHING into 'userData' 
+        // This includes session_data, attendance, marks, etc.
         await prefs.setString('userData', jsonEncode(data));
-        await prefs.setString('userEmail', email);
-        await prefs.setString('userPassword', password);
         await prefs.setString('lastRefreshTime', DateTime.now().toIso8601String());
 
-        // Show success message with day order info
         if (mounted) {
-
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const DashboardScreen()),
           );
         }
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Login failed, please check your credentials.'),
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
-        }
+        _showErrorSnackBar('Login failed: ${response.statusCode}');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Something went wrong. Please try again later.'),
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
+      _showErrorSnackBar('Something went wrong. Please try again later.');
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // Helper to keep the code clean
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     }
   }
 

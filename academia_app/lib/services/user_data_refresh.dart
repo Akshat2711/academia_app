@@ -3,12 +3,23 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/day_order_backup.dart';
 
+
 class DataRefreshService {
   static Future<bool> refreshData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final email = prefs.getString('userEmail');
       final password = prefs.getString('userPassword');
+      
+      // 1. Read existing userData string
+      final userDataString = prefs.getString('userData');
+      Map<String, dynamic>? sessionData;
+
+      if (userDataString != null) {
+        final Map<String, dynamic> fullData = jsonDecode(userDataString);
+        // Extract session_data from the existing blob
+        sessionData = fullData['session_data'];
+      }
 
       if (email == null || password == null) {
         print("❌ Background refresh failed: no credentials");
@@ -16,12 +27,21 @@ class DataRefreshService {
       }
 
       final url = Uri.parse('https://academia-scrapper-api-fast.onrender.com/scrape');
-      final body = jsonEncode({"email": email, "password": password});
+      
+      // 2. Build the request body
+      final Map<String, dynamic> requestBody = {
+        "email": email,
+        "password": password,
+        if (sessionData != null) "session_data": sessionData, // Inline null check
+      };
 
       final response = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
-        body: body,
+        headers: {
+          "Content-Type": "application/json",
+          "accept": "application/json",
+        },
+        body: jsonEncode(requestBody),
       );
 
       if (response.statusCode != 200) {
@@ -31,34 +51,19 @@ class DataRefreshService {
 
       final data = jsonDecode(response.body);
 
-      // --- Day Order handling ---
-      int? dayOrder;
+      // 3. Handle Day Order (data -> attendance -> day_order)
       if (data['attendance']?['day_order'] != null) {
-        dayOrder = data['attendance']['day_order'] as int;
-
         await DayOrderManager.saveDayOrderData(
-          currentDayOrder: dayOrder,
+          currentDayOrder: data['attendance']['day_order'] as int,
           currentDate: DateTime.now(),
         );
-      } else {
-        dayOrder = await DayOrderManager.getCurrentDayOrder();
-
-        if (dayOrder != null) {
-          data['attendance'] ??= {};
-          data['attendance']['day_order'] = dayOrder;
-        }
       }
 
-      // Save user dashboard data
+      // 4. Save the entire new response (which includes updated session_data)
       await prefs.setString('userData', jsonEncode(data));
+      await prefs.setString('lastRefreshTime', DateTime.now().toIso8601String());
 
-      // Save last refresh time
-      await prefs.setString(
-        'lastRefreshTime',
-        DateTime.now().toIso8601String(),
-      );
-
-      print("✅ Background refresh success");
+      print("✅ Background refresh success using nested session data");
       return true;
     } catch (e) {
       print("❌ Background refresh error: $e");

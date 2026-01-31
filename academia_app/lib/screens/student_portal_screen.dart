@@ -29,6 +29,8 @@ class _MainPortalPageState extends State<MainPortalPage> {
     super.initState();
     _checkLocalStorage();
   }
+// To toggle password visibility
+  bool _showPassword = false;
 
   // --- Logic Blocks ---
 
@@ -162,9 +164,24 @@ class _MainPortalPageState extends State<MainPortalPage> {
           children: [
             const Text("STUDENT PORTAL \n LOGIN", style: TextStyle(color: kAccentNeon, fontWeight: FontWeight.w900, fontSize: 32)),
             const SizedBox(height: 48),
-            _buildField("NETID", _netIdController, Icons.person),
+            _buildField(
+              "NETID",
+              _netIdController,
+              Icons.person,
+            ),
             const SizedBox(height: 16),
-            _buildField("PASSWORD", _passwordController, Icons.lock, isObscure: true),
+            _buildField(
+              "PASSWORD",
+              _passwordController,
+              Icons.lock,
+              isObscure: !_showPassword,
+              onToggle: () {
+                setState(() {
+                  _showPassword = !_showPassword;
+                });
+              },
+            ),
+
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -548,16 +565,39 @@ Widget _buildCleanRow(String label, String value) {
     );
   }
 
-  Widget _buildField(String hint, TextEditingController ctrl, IconData icon, {bool isObscure = false}) {
-    return TextField(
-      controller: ctrl, obscureText: isObscure,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        hintText: hint, hintStyle: const TextStyle(color: kMutedText, fontSize: 12),
-        prefixIcon: Icon(icon, color: kMutedText, size: 20),
-        filled: true, fillColor: kCardBlack,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+Widget _buildField(
+  String hint,
+  TextEditingController ctrl,
+  IconData icon, {
+  bool isObscure = false,
+  VoidCallback? onToggle,
+}) {
+  return TextField(
+    controller: ctrl,
+    obscureText: isObscure,
+    style: const TextStyle(color: Colors.white),
+    decoration: InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: kMutedText, fontSize: 12),
+      prefixIcon: Icon(icon, color: kMutedText, size: 20),
+      suffixIcon: onToggle == null
+          ? null
+          : IconButton(
+              icon: Icon(
+                isObscure ? Icons.visibility_off : Icons.visibility,
+                color: kMutedText,
+                size: 20,
+              ),
+              onPressed: onToggle,
+            ),
+      filled: true,
+      fillColor: kCardBlack,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
       ),
-    );
-  }
+    ),
+  );
+}
+
 }

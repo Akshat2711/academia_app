@@ -148,7 +148,7 @@ class FacultyInfo extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: kSurfaceGrey,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(30),
           ),
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,

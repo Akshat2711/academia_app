@@ -29,7 +29,7 @@ class ContactUs extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color: _primaryColor.withOpacity(0.3),
                 ),

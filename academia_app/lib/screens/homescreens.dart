@@ -3,18 +3,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import '../components/subject_info.dart';
 import '../components/faculty_info.dart';
-import '../screens/login_page.dart';
 //user_data_refresh service
 import '../services/user_data_refresh.dart';
+//logout user utility
+import '../utils/logout_user.dart';
 
 
 //profile card
 import '../widgets/profile_card_widget.dart';
-
-
-
-//for loading animation
-import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 
 //stats bar component
 import '../components/stats_bar.dart';
@@ -53,7 +49,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _loadAndAutoRefresh();
+  }
+
+  Future<void> _loadAndAutoRefresh() async {
+    await _loadUserData(); // Showing cached data first
+    
+    final prefs = await SharedPreferences.getInstance();
+    final lastRefreshTime = prefs.getString('lastRefreshTime');
+
+    if (lastRefreshTime != null) {
+      final lastRefresh = DateTime.parse(lastRefreshTime);
+      final difference = DateTime.now().difference(lastRefresh);
+
+// Auto-refresh if last refresh was over 10 minutes ago
+      if (difference.inMinutes >= 10) {
+        await _refreshData();
+      }
+    }
   }
 
   // Format the last refresh time
@@ -81,6 +94,40 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showModernSnackBar(String message, {bool isError = false}) {
+  if (!mounted) return;
+  
+  ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Dismiss current one
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          Icon(
+            isError ? Icons.error_outline : Icons.check_circle_rounded,
+            color: isError ? Colors.redAccent : _primaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            message,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFF1A1A1A),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30),
+      ),
+      margin: EdgeInsets.only(
+        bottom: 20, // Fixed height from bottom
+        left: 24,
+        right: 24,
+      ),
+    ),
+  );
+}
+
   Future<void> _refreshData() async {
     try {
       // CALL REFRESH SERVICE
@@ -88,9 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!success) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Unable to refresh')),
-          );
+          _showModernSnackBar('Unable to refresh', isError: true);
         }
         return;
       }
@@ -112,21 +157,15 @@ class _HomeScreenState extends State<HomeScreen> {
       widget.onDataRefreshed?.call();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Data refreshed successfully'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        _showModernSnackBar('Data refreshed successfully');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error refreshing data')),
-        );
+        _showModernSnackBar('Error refreshing data', isError: true);
       }
     }
   }
+  
 
   Future<void> _loadUserData() async {
     try {
@@ -275,145 +314,134 @@ class _HomeScreenState extends State<HomeScreen> {
   final specialization = studentInfo?['specialization']?.toString() ?? 'No data found';
   final semester = studentInfo?['semester']?.toString() ?? 'No data found';
 
-  return Scaffold(
-    backgroundColor: _backgroundColor, // Pitch black background
-    body: LiquidPullToRefresh(
-      onRefresh: _refreshData,         
-      color: _primaryColor,              // Orange liquid color
-      backgroundColor: Colors.black,     // Behind the liquid
-      showChildOpacityTransition: false, // Smooth fade of child
-      springAnimationDurationInMilliseconds: 500,
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar.large(
-            floating: true,
-            pinned: true,
-            backgroundColor: const Color.fromARGB(255, 0, 0, 0),
-            foregroundColor: Colors.white,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Console', style: TextStyle(fontWeight: FontWeight.w600)),
-                if (_lastRefreshText.isNotEmpty)
-                  Text(
-                    'Updated $_lastRefreshText',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white70,
-                    ),
+return Scaffold(
+      backgroundColor: _backgroundColor, // Pitch Black
+      body: Stack(
+        children: [
+          RefreshIndicator.adaptive(
+            onRefresh: _refreshData,
+            color: _primaryColor, // Orange
+            backgroundColor: const Color(0xFF1A1A1A),
+            edgeOffset: 120,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              slivers: [
+                SliverAppBar.large(
+                  floating: true,
+                  pinned: true,
+                  stretch: true,
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Console', 
+                        style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1)
+                      ),
+                      if (_lastRefreshText.isNotEmpty)
+                        Text(
+                          'Updated $_lastRefreshText',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: _primaryColor.withOpacity(0.8),
+                          ),
+                        ),
+                    ],
                   ),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.logout_outlined),
+                      color: _primaryColor,
+                      onPressed: () => logoutAction(context),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                ),
+                
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      const Center(
+                        child: Opacity(
+                          opacity: 0.5,
+                          child: Text(
+                            "Pull down to refresh",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      SlidingProfileAnnouncementWidget(
+                        name: displayName,
+                        regno: regno,
+                        program: program,
+                        specialization: specialization,
+                        semester: semester,
+                      ),
+                      
+                      const SizedBox(height: 16),
+
+                      StatsBar(
+                        overallAttendance: _overallAttendance,
+                        courseCount: _courseCount,
+                        totalCredits: _totalCredits,
+                        primaryColor: _primaryColor,
+                      ),
+                      
+                      const SizedBox(height: 16),
+
+                      QuickActions(primaryColor: _primaryColor),
+
+                      if (_courses.isNotEmpty) ...[
+                        const SizedBox(height: 32),
+                        const Text(
+                          '  Your Courses',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ..._courses.map((course) => SubjectInfo(course: course)),
+                      ],
+
+                      const SizedBox(height: 24),
+                      FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
+                      const ContactUs(),
+                      const SizedBox(height: 100),
+                    ]),
+                  ),
+                ),
               ],
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                color: const Color.fromARGB(255, 255, 158, 67),
-                onPressed: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  // Remove all user stored data in local storage
-                  await prefs.remove('userData');
-                  await prefs.remove('customEvents');
-                  await prefs.remove('GRAPH_ATTENDANCE');
-                  await prefs.remove('userEmail');
-                  await prefs.remove('userPassword');
-
-
-                  if (!mounted) return;
-
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CLoginPage()),
-                    (route) => false,
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-            ],
           ),
-SliverPadding(
-  padding: const EdgeInsets.all(16),
-  sliver: SliverList(
-    delegate: SliverChildListDelegate([
-      // Info banner at the top
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color.fromARGB(23, 107, 106, 106),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.info_outline, color: const Color.fromARGB(255, 62, 62, 62), size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Tip: Pull down from the top to refresh data.',
-                style: TextStyle(
-                  color: const Color.fromARGB(255, 62, 62, 62),
-                  fontSize: 14,
-                ),
+          
+          // Linear loader pinned to top status bar during refresh
+          if (_loading)
+            Positioned(
+              top: MediaQuery.of(context).padding.top,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(
+                minHeight: 2,
+                backgroundColor: Colors.transparent,
+                valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
               ),
             ),
-          ],
-        ),
-      ),
-
-      const SizedBox(height: 16),
-
-      // Profile Card
-      SlidingProfileAnnouncementWidget(
-        name: displayName,
-        regno: regno,
-        program: program,
-        specialization:specialization,
-        semester: semester,
-      ),
-      
-      const SizedBox(height: 16),
-
-      // Stats Grid
-      StatsBar(
-        overallAttendance: _overallAttendance,
-        courseCount: _courseCount,
-        totalCredits: _totalCredits,
-        primaryColor: _primaryColor,
-      ),
-      const SizedBox(height: 16),
-
-      // Quick Actions
-      QuickActions(primaryColor: _primaryColor),
-
-      // Courses Section
-      if (_courses.isNotEmpty) ...[
-        const SizedBox(height: 30),
-        Text(
-            '  Your Courses',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
-          ),
-        const SizedBox(height: 22),
-        ..._courses.map((course) => SubjectInfo(course: course)),
-      ],
-
-      // Faculty Info
-      const SizedBox(height: 24),
-      FacultyInfo(advisors: _advisors.isNotEmpty ? _advisors : null),
-      // Contact Support Section
-      ContactUs(),
-      const SizedBox(height: 100),
-    ]),
-  ),
-),
-
         ],
       ),
-    ),
-  );
+    );
   }
 
 

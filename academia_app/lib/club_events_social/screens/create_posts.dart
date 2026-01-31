@@ -40,8 +40,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   void initState() {
     super.initState();
     _loadUserEmail();
+    _loadSavedClubId();
   }
+  // Password visibility toggle
+  bool _showPassword = false;
 
+
+  Future<void> _loadSavedClubId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedId = prefs.getString('lastClubId');
+    if (savedId != null && savedId.isNotEmpty) {
+      setState(() {
+        _clubIdController.text = savedId;
+      });
+    }
+  }
   Future<void> _loadUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
     String rawEmail = prefs.getString('userEmail') ?? "user@edu.com";
@@ -125,6 +138,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _performUpload() async {
     setState(() => _isUploading = true);
     try {
+      // Save the Club ID if posting as a club
+      if (!_isIndividual) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('lastClubId', _clubIdController.text.trim());
+        }
       await widget.apiService.createPost(
         ownerIndividual: _isIndividual,
         content: _contentController.text,
@@ -190,9 +208,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Column(
                   children: [
-                    _buildModernInput(_clubIdController, "CLUB ID", Icons.alternate_email_rounded),
-                    const SizedBox(height: 12),
-                    _buildModernInput(_clubPassController, "CLUB PASS", Icons.lock_open_rounded, obscure: true),
+                     _buildModernInput(
+                    _clubIdController,
+                    "CLUB ID",
+                    Icons.alternate_email_rounded,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildModernInput(
+                    _clubPassController,
+                    "CLUB PASS",
+                    Icons.lock_open_rounded,
+                    obscure: !_showPassword,
+                    onToggle: () {
+                      setState(() {
+                        _showPassword = !_showPassword;
+                      });
+                    },
+                  )
                   ],
                 ),
               ),
@@ -264,23 +296,48 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
-  Widget _buildModernInput(TextEditingController ctrl, String label, IconData icon, {bool obscure = false}) {
-    return TextField(
-      controller: ctrl,
-      obscureText: obscure,
-      cursorColor: kAccentWhite,
-      style: const TextStyle(color: kAccentWhite, fontSize: 14),
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: kMutedWhite, size: 18),
-        hintText: label,
-        hintStyle: const TextStyle(color: kMutedWhite, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1),
-        filled: true,
-        fillColor: kCardGrey,
-        contentPadding: const EdgeInsets.symmetric(vertical: 18),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+Widget _buildModernInput(
+  TextEditingController ctrl,
+  String label,
+  IconData icon, {
+  bool obscure = false,
+  VoidCallback? onToggle,
+}) {
+  return TextField(
+    controller: ctrl,
+    obscureText: obscure,
+    cursorColor: kAccentWhite,
+    style: const TextStyle(color: kAccentWhite, fontSize: 14),
+    decoration: InputDecoration(
+      prefixIcon: Icon(icon, color: kMutedWhite, size: 18),
+      suffixIcon: onToggle == null
+          ? null
+          : IconButton(
+              icon: Icon(
+                obscure ? Icons.visibility_off : Icons.visibility,
+                color: kMutedWhite,
+                size: 18,
+              ),
+              onPressed: onToggle,
+            ),
+      hintText: label,
+      hintStyle: const TextStyle(
+        color: kMutedWhite,
+        fontWeight: FontWeight.bold,
+        fontSize: 10,
+        letterSpacing: 1,
       ),
-    );
-  }
+      filled: true,
+      fillColor: kCardGrey,
+      contentPadding: const EdgeInsets.symmetric(vertical: 18),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: BorderSide.none,
+      ),
+    ),
+  );
+}
+
 
   Widget _buildImageStrip() {
     return Container(
