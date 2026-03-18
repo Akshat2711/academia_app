@@ -20,7 +20,7 @@ class TimetableScreen extends StatefulWidget {
 class _TimetableScreenState extends State<TimetableScreen> {
   // --- COLOR PALETTE (PRESERVED) ---
   static const Color _pitchBlack = Color(0xFF000000);
-  static const Color _neonPink = Color(0xFFFF1493);
+  static const Color _neonPink = Color.fromARGB(255, 199, 8, 110);
   static const Color _white = Colors.white;
   static const Color _holidayGold = Color.fromARGB(255, 223, 223, 219);
   static const Color _holidayOrange = Color.fromARGB(255, 169, 164, 162);

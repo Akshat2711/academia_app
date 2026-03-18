@@ -333,11 +333,13 @@ Future<void> _loadMarksFromPrefs() async {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      course['title'],
+                      (course['title'].length > 22)
+                          ? course['title'].substring(0, 22) + '...'
+                          : course['title'],
                       style: const TextStyle(
+                        color: _white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: _white,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -361,7 +363,7 @@ Future<void> _loadMarksFromPrefs() async {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: statusColor,
+                      color: _white,
                     ),
                   ),
                   Text(
@@ -452,7 +454,7 @@ Widget _buildModernTestRow(Map<String, dynamic> test) {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: color.withOpacity(0.2)),
           ),
           child: Text(

@@ -290,25 +290,32 @@ Widget _buildClubHeader() {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            widget.club.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.8,
+          Expanded(
+            child: Text(
+              widget.club.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.8,
+              ),
             ),
           ),
 
           const SizedBox(width: 6),
 
-          // Verified Badge (Instagram/Facebook style)
-          Container(
+          const SizedBox(
             width: 20,
             height: 20,
-            child: const Icon(Icons.verified, color: Colors.blueAccent, size: 16)
+            child: Icon(
+              Icons.verified,
+              color: Colors.blueAccent,
+              size: 16,
+            ),
           ),
         ],
       ),
@@ -317,6 +324,8 @@ Widget _buildClubHeader() {
 
       Text(
         "@${widget.club.name}",
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           color: Colors.white38,
           fontSize: 10,
@@ -327,6 +336,7 @@ Widget _buildClubHeader() {
     ],
   );
 }
+
 
 
   Widget _buildStatsRow() {

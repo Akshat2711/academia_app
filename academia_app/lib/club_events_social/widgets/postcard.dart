@@ -363,10 +363,19 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
                                 child: Text(
                                   widget.post.ownerIndividual
                                       ? _truncateEmail(widget.post.individualEmail ?? "User")
-                                      : (_clubData?.name ?? "Loading..."),
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                      : ((_clubData?.name ?? "").length > 10
+                                          ? "${(_clubData?.name ?? "").substring(0, 10)}..."
+                                          : (_clubData?.name ?? "Loading...")),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
                                 ),
+
                               ),
                               if (!widget.post.ownerIndividual) ...[
                                 const SizedBox(width: 4),

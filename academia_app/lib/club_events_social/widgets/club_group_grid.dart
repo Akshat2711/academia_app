@@ -233,109 +233,131 @@ class _ModernClubCardState extends State<_ModernClubCard> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        CupertinoPageRoute(
-          builder: (context) => ClubDetailsScreen(
-            club: widget.club,
-            apiService: widget.apiService,
-          ),
+ @override
+Widget build(BuildContext context) {
+  return GestureDetector(
+    onTap: () => Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => ClubDetailsScreen(
+          club: widget.club,
+          apiService: widget.apiService,
         ),
       ),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(24),
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          // Banner Background
-          if (widget.club.bannerUrl != null && widget.club.bannerUrl!.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+          // Background image
+          if (widget.club.bannerUrl != null &&
+              widget.club.bannerUrl!.isNotEmpty)
+            Positioned.fill(
               child: CachedNetworkImage(
                 imageUrl: widget.club.bannerUrl!,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: const Color(0xFF0D0D0D),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: const Color(0xFF0D0D0D),
-                ),
+                placeholder: (_, __) =>
+                    Container(color: const Color(0xFF0D0D0D)),
+                errorWidget: (_, __, ___) =>
+                    Container(color: const Color(0xFF0D0D0D)),
                 cacheKey: 'club_banner_${widget.club.id}',
               ),
             )
           else
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF0D0D0D),
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-          
+            Container(color: const Color(0xFF0D0D0D)),
+
           // Dark overlay
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.8),
-                ],
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.8),
+                  ],
+                ),
               ),
             ),
           ),
-          
+
           // Content
           Container(
-            width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.08), width: 1),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.08),
+                width: 1,
+              ),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildAvatar(),
                 const SizedBox(height: 12),
+
                 Text(
                   widget.club.name,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+
                 const SizedBox(height: 4),
+
                 Text(
                   '$_subscriberCount Subscribers',
-                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                  ),
                 ),
+
                 const SizedBox(height: 12),
                 _buildSubscribeButton(),
               ],
             ),
           ),
-          
-          // Core Member Badge
+
+          // Core badge
           if (_isCoreMember)
             Positioned(
               top: 12,
               right: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.amber.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.withOpacity(0.3), width: 0.5),
+                  border: Border.all(
+                    color: Colors.amber.withOpacity(0.3),
+                    width: 0.5,
+                  ),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.verified_user_rounded, color: Colors.amber, size: 10),
+                    Icon(
+                      Icons.verified_user_rounded,
+                      color: Colors.amber,
+                      size: 10,
+                    ),
                     SizedBox(width: 4),
                     Text(
                       "CORE",
-                      style: TextStyle(color: Colors.amber, fontSize: 8, fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                        color: Colors.amber,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ],
                 ),
@@ -343,8 +365,9 @@ class _ModernClubCardState extends State<_ModernClubCard> {
             ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildAvatar() {
     return Container(

@@ -22,7 +22,7 @@ class DayOrderCard extends StatefulWidget {
 class _DayOrderCardState extends State<DayOrderCard> {
   // --- Styling Constants ---
   static const Color _pitchBlack = Color(0xFF000000);
-  static const Color _neonPink = Color(0xFFFF1493);
+  static const Color _neonPink = Color.fromARGB(255, 201, 4, 109);
   static const Color _white = Colors.white;
   static const Color _cardBackground = Color(0xFF161616);
 

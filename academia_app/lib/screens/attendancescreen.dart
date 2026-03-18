@@ -93,17 +93,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 _buildOverallCard(),
                 const SizedBox(height: 32),
                 if (_courses.isNotEmpty) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Course-wise Details', 
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _whiteSecondary)
-                      ),
-                      Icon(Icons.sort_rounded, color: _white.withOpacity(0.3), size: 20),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
                   ..._courses.map((course) => CourseAttendanceCard(course: course)),
                 ] else 
                   _buildEmptyState(),

@@ -57,7 +57,7 @@ class ContactUs extends StatelessWidget {
 
           // Version
           Text(
-            'Version 1.28.26 • Built by Team Console',
+            'Version 1.31.26 • Built by Team Console',
             style: TextStyle(
               color: Colors.white24,
               fontSize: 10,

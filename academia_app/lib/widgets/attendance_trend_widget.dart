@@ -274,84 +274,98 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
   }
 
   Widget _buildHeader(List<AttendanceTrendData> displayData) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.show_chart_rounded, size: 14, color: _white.withOpacity(0.3)),
-            const SizedBox(width: 8),
-            Text(
-              '5-DAY TREND',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: _white.withOpacity(0.3),
-                letterSpacing: 1.2,
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+         
+          if (_hasDeclined && displayData.length > 1)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(226, 234, 86, 83),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Text(
+                'DECLINING',
+                style: TextStyle(
+                  color: Color.fromARGB(225, 52, 49, 49),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
-          ],
-        ),
-        if (_hasDeclined && displayData.length > 1) 
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: Color.fromARGB(226, 234, 86, 83),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Text(
-              'DECLINING',
-              style: TextStyle(color: Color.fromARGB(225, 52, 49, 49), fontSize: 9, fontWeight: FontWeight.w900),
-            ),
-          ),
-      ],
-    );
-  }
+        ],
+      ),
+    );  
+}
 
   Widget _buildContent(List<AttendanceTrendData> displayData) {
+
     // CASE 1: No data recorded yet
     if (displayData.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            'No attendance history available yet',
-            style: TextStyle(color: _white.withOpacity(0.2), fontSize: 12),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: Text(
+              'No attendance history available yet',
+              style: TextStyle(
+                color: _white.withOpacity(0.2),
+                fontSize: 12,
+              ),
+            ),
           ),
         ),
       );
     }
 
-    // CASE 2: Only one data point (Cannot form a trend line)
+    // CASE 2: Only one data point
     if (displayData.length == 1) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _white.withOpacity(0.02),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: _skyBlue.withOpacity(0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.insights, color: _skyBlue, size: 16),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Initial point: ${displayData.first.percentage.toStringAsFixed(1)}% recorded on ${displayData.first.date}',
-                style: TextStyle(color: _white.withOpacity(0.5), fontSize: 11),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _white.withOpacity(0.02),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _skyBlue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.insights,
+                  color: _skyBlue,
+                  size: 16,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Initial point: ${displayData.first.percentage.toStringAsFixed(1)}% recorded on ${displayData.first.date}',
+                  style: TextStyle(
+                    color: _white.withOpacity(0.5),
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    // CASE 3: 2 or more points (Modern Graph)
+    // CASE 3: 2+ points (graph remains full width)
     return _buildModernGraphSection(displayData);
   }
 
@@ -372,12 +386,15 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
         ),
         const SizedBox(height: 16),
         // X-Axis Date & % Labels
-        Row(
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: displayData.map((data) {
             final date = DateTime.parse(data.date);
             final dayName = DateFormat('EEE').format(date).toUpperCase();
-            final isToday = DateFormat('yyyy-MM-dd').format(DateTime.now()) == data.date;
+            final isToday =
+                DateFormat('yyyy-MM-dd').format(DateTime.now()) == data.date;
 
             return Column(
               children: [
@@ -402,6 +419,7 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
             );
           }).toList(),
         ),
+      )
       ],
     );
   }

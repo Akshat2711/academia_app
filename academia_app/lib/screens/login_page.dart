@@ -1,12 +1,13 @@
 import 'dart:convert';
-import 'package:academia_app/screens/dasboardscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/responsive_helper.dart';
-import '../utils/day_order_backup.dart'; // Import the day order manager
 import 'package:lottie/lottie.dart';
 
+// Assuming these paths remain the same in your project
+import '../utils/responsive_helper.dart';
+import '../utils/day_order_backup.dart'; 
+import 'package:academia_app/screens/dasboardscreen.dart';
 
 class CLoginPage extends StatefulWidget {
   const CLoginPage({super.key});
@@ -21,7 +22,88 @@ class _CLoginPageState extends State<CLoginPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  /// New Method to show the Bottom Sheet Error
+  void _showErrorBottomSheet(String message) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final res = ResponsiveHelper(context);
+        return Container(
+          padding: EdgeInsets.all(res.width(6)),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1A1A1A), // Dark elegant background
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[700],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              SizedBox(height: res.height(3)),
+              const Icon(
+                Icons.error_outline_rounded,
+                color: Color(0xFFEF4444),
+                size: 48,
+              ),
+              SizedBox(height: res.height(2)),
+              Text(
+                'Login Failed',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: res.fontSize(5),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: res.height(1.5)),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: res.fontSize(3.8),
+                ),
+              ),
+              SizedBox(height: res.height(4)),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.symmetric(vertical: res.height(1.8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Try Again', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              SizedBox(height: res.height(2)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> loginUser() async {
+    // Basic Validation
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showErrorBottomSheet("Please enter both email and password.");
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -49,12 +131,9 @@ class _CLoginPageState extends State<CLoginPage> {
         final data = jsonDecode(response.body);
         final prefs = await SharedPreferences.getInstance();
 
-        // 1. Save Credentials
         await prefs.setString('userEmail', email);
         await prefs.setString('userPassword', password);
 
-        // 2. Handle Day Order
-        // Logic points to: data['attendance']['day_order']
         int? dayOrder;
         if (data['attendance'] != null && data['attendance']['day_order'] != null) {
           dayOrder = data['attendance']['day_order'] as int;
@@ -63,7 +142,6 @@ class _CLoginPageState extends State<CLoginPage> {
             currentDate: DateTime.now(),
           );
         } else {
-          // Fallback to backup if API misses it
           dayOrder = await DayOrderManager.getCurrentDayOrder();
           if (dayOrder != null) {
             data['attendance'] ??= {};
@@ -71,8 +149,6 @@ class _CLoginPageState extends State<CLoginPage> {
           }
         }
 
-        // 3. Save EVERYTHING into 'userData' 
-        // This includes session_data, attendance, marks, etc.
         await prefs.setString('userData', jsonEncode(data));
         await prefs.setString('lastRefreshTime', DateTime.now().toIso8601String());
 
@@ -83,30 +159,23 @@ class _CLoginPageState extends State<CLoginPage> {
           );
         }
       } else {
-        _showErrorSnackBar('Login failed: ${response.statusCode}');
+        // Try to parse error message from server if it exists
+        String errorMessage = 'Status Code: ${response.statusCode}';
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['detail'] ?? errorData['message'] ?? errorMessage;
+        } catch (_) {}
+        
+        _showErrorBottomSheet(errorMessage);
       }
     } catch (e) {
-      _showErrorSnackBar('Something went wrong. Please try again later.');
+      _showErrorBottomSheet('Unable to connect to the server. Check your internet connection.');
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  // Helper to keep the code clean
-  void _showErrorSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
     }
   }
 
@@ -122,7 +191,6 @@ class _CLoginPageState extends State<CLoginPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Login Image at Top
               SizedBox(
                 height: res.height(32),
                 child: Lottie.asset(
@@ -132,10 +200,7 @@ class _CLoginPageState extends State<CLoginPage> {
                   fit: BoxFit.contain,
                 ),
               ),
-
               SizedBox(height: res.height(10)),
-
-              // Welcome Text
               Text(
                 'Welcome to Academia',
                 textAlign: TextAlign.center,
@@ -167,8 +232,6 @@ class _CLoginPageState extends State<CLoginPage> {
                 ),
               ),
               SizedBox(height: res.height(4)),
-
-              // Email Field
               _buildTextField(
                 controller: _emailController,
                 hint: 'Email address',
@@ -177,8 +240,6 @@ class _CLoginPageState extends State<CLoginPage> {
                 res: res,
               ),
               SizedBox(height: res.height(2)),
-
-              // Password Field
               _buildTextField(
                 controller: _passwordController,
                 hint: 'Password',
@@ -193,29 +254,25 @@ class _CLoginPageState extends State<CLoginPage> {
                 res: res,
               ),
               SizedBox(height: res.height(3)),
-
-              // Login Button
               _buildLoginButton(res),
               SizedBox(height: res.height(3)),
-
-            // Footer
-           Center(
-              child: InkWell(
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => DashboardScreen()),
-                  );
-                },
-                child: Text(
-                  'Continue without Login',
-                  style: TextStyle(
-                    color: const Color.fromARGB(255, 218, 143, 103),
-                    fontSize: res.fontSize(3.2),
+              Center(
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                    );
+                  },
+                  child: Text(
+                    'Continue without Login',
+                    style: TextStyle(
+                      color: const Color.fromARGB(255, 218, 143, 103),
+                      fontSize: res.fontSize(3.2),
+                    ),
                   ),
                 ),
               ),
-            ),
             ],
           ),
         ),
@@ -236,42 +293,22 @@ class _CLoginPageState extends State<CLoginPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(18),
       ),
       child: TextField(
         controller: controller,
         obscureText: isPassword && obscureText,
         keyboardType: keyboardType,
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: res.fontSize(4),
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: TextStyle(
-            color: Colors.grey[400],
-            fontSize: res.fontSize(4),
-            fontWeight: FontWeight.w400,
-          ),
-          prefixIcon: Icon(
-            icon,
-            color: Colors.grey[600],
-            size: res.width(5.5),
-          ),
+          hintStyle: TextStyle(color: Colors.grey[400]),
+          prefixIcon: Icon(icon, color: Colors.grey[600]),
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
                     obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                     color: Colors.grey[600],
-                    size: res.width(5.5),
                   ),
                   onPressed: onTogglePassword,
                 )
@@ -291,16 +328,7 @@ class _CLoginPageState extends State<CLoginPage> {
       height: res.height(7),
       decoration: BoxDecoration(
         color: _isLoading ? Colors.grey[300] : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: _isLoading
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.2),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Material(
         color: Colors.transparent,
@@ -309,21 +337,20 @@ class _CLoginPageState extends State<CLoginPage> {
           borderRadius: BorderRadius.circular(14),
           child: Center(
             child: _isLoading
-                ? SizedBox(
-                    width: res.width(6),
-                    height: res.width(6),
-                    child: const CircularProgressIndicator(
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
                       strokeWidth: 2.5,
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                     ),
                   )
-                : Text(
+                : const Text(
                     'Sign In',
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: res.fontSize(4.5),
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
                     ),
                   ),
           ),

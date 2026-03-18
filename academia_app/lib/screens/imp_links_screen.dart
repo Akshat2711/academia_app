@@ -94,11 +94,11 @@ class _LinkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: kCardColor,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(20),
       elevation: 4,
       child: InkWell(
         onTap: () => onTap(url),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -123,7 +123,7 @@ class _LinkCard extends StatelessWidget {
                           const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color.fromARGB(255, 225, 228, 228),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(
                         "Official",

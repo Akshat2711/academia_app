@@ -131,7 +131,7 @@ class _CGPACalculatorState extends State<CGPACalculator> {
             margin: const EdgeInsets.only(right: 16),
             decoration: BoxDecoration(
               color: Colors.grey[900],
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               children: [
@@ -174,7 +174,7 @@ class _CGPACalculatorState extends State<CGPACalculator> {
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: const Color.fromARGB(255, 0, 0, 0),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Column(
                         children: [
@@ -274,7 +274,7 @@ class _CGPACalculatorState extends State<CGPACalculator> {
                             backgroundColor: Colors.white,
                             foregroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
                           child: const Text(
@@ -312,7 +312,7 @@ class _ToggleButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
@@ -365,7 +365,7 @@ class _CourseCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,7 +415,7 @@ class _CourseCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: Colors.black,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: TextFormField(
                         initialValue: course.credit.toString(),
@@ -456,7 +456,7 @@ class _CourseCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: Colors.black,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(

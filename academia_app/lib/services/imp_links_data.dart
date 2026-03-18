@@ -40,6 +40,14 @@ List<Map<String, String>> pass_imp_links() {
       "official": "no"
     },
 
+     {
+      "title": "Rydin",
+      "desc": "Student Ride Sharing Platform",
+      "url": "https://rydin.vercel.app/",
+      "official": "no"
+    },
+
+
     {
       "title": "PreLab",
       "desc": "Smart lab partner for SRMIST students",

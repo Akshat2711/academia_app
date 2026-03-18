@@ -445,10 +445,13 @@ void _calculatePredictions() {
       appBar: AppBar(
         title: const Text(
           'Predict Attendance',
-          style: TextStyle(fontWeight: FontWeight.w600, color: _white),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: _white,
+          ),
         ),
         backgroundColor: _pitchBlack,
-        foregroundColor: _lightNavy, // Changed to lightNavy
+        foregroundColor: _lightNavy,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -457,13 +460,37 @@ void _calculatePredictions() {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildDateSelector(),
+
+            const SizedBox(height: 12), // spacing added
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Expanded(
+                  child: Text(
+                    "Assumes today's attendance is already marked for all subjects. "
+                    "Predictions are based on that assumption.",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color.fromARGB(232, 246, 170, 170),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
             const SizedBox(height: 20),
+
             if (_startDate != null && _endDate != null) ...[
               _buildCalculateButton(),
               const SizedBox(height: 20),
             ],
+
             if (_loading)
-              const Center(child: CircularProgressIndicator(color: _lightNavy)) // Changed color
+              const Center(
+                child: CircularProgressIndicator(color: _lightNavy),
+              )
             else if (_predictions.isNotEmpty) ...[
               _buildDayOrdersCard(),
               const SizedBox(height: 20),
@@ -474,6 +501,7 @@ void _calculatePredictions() {
       ),
     );
   }
+
 
   Widget _buildDayOrdersCard() {
     return Container(

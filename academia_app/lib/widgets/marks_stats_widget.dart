@@ -114,7 +114,7 @@ class MarksStatsWidget extends StatelessWidget {
               children: [
                 _buildStat('EST. CGPA', stats['cgpa'].toStringAsFixed(2)),
                 _buildVerticalDivider(),
-                _buildStat('SCORE', '${stats['obtainedMarks'].toStringAsFixed(0)}/${stats['maxMarks'].toStringAsFixed(0)}'),
+                _buildStat('SCORE', '${stats['obtainedMarks'].toStringAsFixed(1)}/${stats['maxMarks'].toStringAsFixed(0)}'),
                 _buildVerticalDivider(),
                 _buildStat('GRADE', stats['grade']),
               ],
@@ -132,14 +132,14 @@ class MarksStatsWidget extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, size: 14, color: _white),
+                  const Icon(Icons.info_outline, size: 14, color: Color.fromARGB(255, 11, 11, 11)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Based on ${stats['totalTests']} test(s) across ${stats['totalCourses']} course(s)',
                       style: TextStyle(
                         fontSize: 11,
-                        color: _white.withOpacity(0.8),
+                        color: const Color.fromARGB(255, 5, 5, 5).withOpacity(0.8),
                       ),
                     ),
                   ),

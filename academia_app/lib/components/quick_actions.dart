@@ -38,22 +38,24 @@ class QuickActions extends StatelessWidget {
         ),
 
         // --- SECTION 0: BANNERS ---
-        _buildBanner(
-          context,
-          icon: Icons.auto_graph_rounded, // Better: Graph for results
-          title: 'Semester Results',
-          subtitle: 'Detailed breakdown of your grades',
-          color: const Color(0xFFAFF096),
-          target: const MainPortalPage(),
-        ),
-        const SizedBox(height: 12),
-        _buildBanner(
+
+       _buildBanner(
           context,
           icon: Icons.auto_awesome_mosaic_rounded, // Better: Mosaic for social/feed
-          title: 'Social Space (Beta)',
+          title: 'Social Space',
           subtitle: 'Checkout campus feed, clubs and more',
           color: const Color(0xFF65ABE8),
           target: const FeedScreen(),
+        ),
+        const SizedBox(height: 12),
+        
+       _buildBanner(
+          context,
+          icon: Icons.notifications_active_rounded,
+          title: 'Campus Announcements',
+          subtitle: 'Latest news and official updates',
+          color: const Color.fromARGB(255, 211, 225, 230),
+          target: const AnnouncementScreen(),
         ),
         const SizedBox(height: 12),
 
@@ -100,14 +102,14 @@ class QuickActions extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // --- SECTION 2: ANNOUNCEMENT ---
-        _buildBanner(
+        // --- SECTION 2: semester results ---
+         _buildBanner(
           context,
-          icon: Icons.notifications_active_rounded,
-          title: 'Campus Announcements',
-          subtitle: 'Latest news and official updates',
-          color: const Color(0xFF4ACDF5),
-          target: const AnnouncementScreen(),
+          icon: Icons.auto_graph_rounded, // Better: Graph for results
+          title: 'Semester Results',
+          subtitle: 'Detailed breakdown of your grades',
+          color: const Color(0xFFAFF096),
+          target: const MainPortalPage(),
         ),
         const SizedBox(height: 12),
 

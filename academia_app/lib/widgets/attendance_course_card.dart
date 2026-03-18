@@ -43,63 +43,72 @@ class CourseAttendanceCard extends StatelessWidget {
         statusIcon = Icons.error_outline_rounded;
       } else {
         final margin = ((attended / 0.75) - conducted).floor().clamp(0, 999);
-        targetText = margin <= 0 ? 'Threshold reached' : 'Can miss $margin safely';
+        targetText = margin <= 0 ? 'No Margin' : 'Can miss $margin safely';
         statusColor = margin <= 0 ? _warningAmber : _accentBlue; 
-        statusIcon = margin <= 0 ? Icons.warning_amber_rounded : Icons.check_circle_outline;
+        statusIcon = margin <= 0 ? Icons.warning_amber_rounded : Icons.info_outline;
       }
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: _surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _white.withOpacity(0.05), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+return Container(
+  margin: const EdgeInsets.only(bottom: 20),
+  decoration: BoxDecoration(
+    color: _surface,
+    borderRadius: BorderRadius.circular(24),
+    border: Border.all(color: _white.withOpacity(0.05), width: 1),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.2),
+        blurRadius: 15,
+        offset: const Offset(0, 8),
       ),
-      child: Padding(
+    ],
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+
+      // Padded content
+      Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. MODERN HEADER (Synced with Marks Card)
+            // 1. MODERN HEADER
             _buildHeader(percentage, statusColor),
-            
+
             const SizedBox(height: 24),
-            
+
             // 2. PROGRESS BAR
-            _buildProgressBar(percentage),
-            
+            _buildProgressBar(percentage, statusColor),
+
             const SizedBox(height: 24),
-            
-            // 3. STATS ROW (Present / Absent / Total)
+
+            // 3. STATS ROW
             _buildStatsRow(attended, absent, conducted),
-            
+
             const SizedBox(height: 20),
-            
-            // 4. INSIGHT BANNER (Contextual Feedback)
+
+            // 4. INSIGHT BANNER
             _buildInsightBanner(statusColor, statusIcon, targetText),
-            
-            const SizedBox(height: 24),
-            
-            // 5. ATTENDANCE TREND (The Graph Widget)
-            AttendanceTrendWidget(
-              courseId: course['unique_id'],
-              courseTitle: course['title'],
-              currentPercentage: percentage,
-              currentConducted: conducted,
-              currentAbsent: absent,
-            ),
           ],
         ),
       ),
-    );
+
+      const SizedBox(height: 4),
+
+      // Graph WITHOUT padding (edge-to-edge inside card)
+      AttendanceTrendWidget(
+        courseId: course['unique_id'],
+        courseTitle: course['title'],
+        currentPercentage: percentage,
+        currentConducted: conducted,
+        currentAbsent: absent,
+      ),
+
+      const SizedBox(height: 20), // bottom spacing inside card
+    ],
+  ),
+);
   }
 
   // --- HEADER WIDGET ---
@@ -159,7 +168,7 @@ class CourseAttendanceCard extends StatelessWidget {
   }
 
   // --- PROGRESS BAR WIDGET ---
-  Widget _buildProgressBar(double percentage) {
+  Widget _buildProgressBar(double percentage, Color statusColor) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(100),
       child: Container(
@@ -170,9 +179,9 @@ class CourseAttendanceCard extends StatelessWidget {
           alignment: Alignment.centerLeft,
           widthFactor: (percentage / 100).clamp(0.0, 1.0),
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [_skyBlue, _accentBlue],
+                colors: [statusColor.withAlpha(255), statusColor.withOpacity(0.7)],
               ),
             ),
           ),
