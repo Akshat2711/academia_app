@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 
 // IMPORTANT: Import your announcement service
 // Update this path to match your project structure
 import '../services/announcement_data.dart';
+
+// IMPORTANT: Import  video URL service
+import '../services/video_data_link.dart';
+
 
 class SlidingProfileAnnouncementWidget extends StatefulWidget {
   final String name;
@@ -34,18 +39,68 @@ class _SlidingProfileAnnouncementWidgetState
   Map<String, dynamic>? _announcementsData;
   bool _isLoading = true;
   int _currentAnnouncementIndex = 0;
+  late VideoPlayerController _videoController;
+  bool _videoInitializationFailed = false;
+  bool _videoControllerReady = false;
 
   @override
   void initState() {
     super.initState();
-    _startAutoSlide();
-    // Delay loading announcements to ensure Firebase is initialized
+    // Delay both video and announcements to ensure Firebase is initialized
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
+        _initializeVideoPlayer();
         _loadAnnouncements();
       }
     });
+    _startAutoSlide();
   }
+
+Future<void> _initializeVideoPlayer() async {
+  try {
+    // 🔹 Get URL from Firestore service (cached 24h)
+    final url = await getProfileCardVideoUrl();
+    
+
+    if (url == null || url.isEmpty) {
+      throw Exception("No video URL available");
+    }
+
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(url),
+    );
+    _videoControllerReady = true;
+
+    await _videoController.initialize();
+
+    // 🔹 Validate video (avoids silent failures)
+    if (!_videoController.value.isInitialized ||
+        _videoController.value.duration == Duration.zero) {
+      throw Exception("Invalid or unsupported video");
+    }
+
+    _videoController
+      ..setLooping(true)
+      ..setVolume(0)
+      ..play();
+
+    if (mounted) {
+      setState(() {
+        _videoInitializationFailed = false;
+      });
+    }
+  } catch (e) {
+    print('❌ Video init failed (DB/network): $e');
+
+    // 🔻 Let UI fallback to gradient
+    if (mounted) {
+      setState(() {
+        _videoInitializationFailed = true;
+        _videoControllerReady = false;
+      });
+    }
+  }
+}
 
   Future<void> _loadAnnouncements() async {
     try {
@@ -148,6 +203,9 @@ class _SlidingProfileAnnouncementWidgetState
   void dispose() {
     _timer?.cancel();
     _pageController.dispose();
+    if (_videoControllerReady) {
+      _videoController.dispose();
+    }
     super.dispose();
   }
 
@@ -185,61 +243,101 @@ class _SlidingProfileAnnouncementWidgetState
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color.fromARGB(252, 238, 161, 47), Color.fromARGB(255, 221, 139, 76)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
           borderRadius: BorderRadius.circular(30),
-          
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(18),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Video Background
+              if (_videoControllerReady && _videoController.value.isInitialized)
+                SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _videoController.value.size.width,
+                      height: _videoController.value.size.height,
+                      child: VideoPlayer(_videoController),
+                    ),
                   ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 32),
+                )
+              else if (_videoInitializationFailed)
+                Container(
+                  color: const Color.fromARGB(255, 245, 154, 18),
+                )
+              else
+                Container(
+                  color: Colors.black,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.regno,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
+
+              // Dark Overlay for readability
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.1),
+                      Colors.black.withOpacity(0.2),
                     ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Divider(color: Colors.white24),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.school, widget.program),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.analytics, widget.specialization),
-            const SizedBox(height: 12),
-            _buildInfoRow(Icons.book, 'Semester ${widget.semester}'),
-          ],
+              ),
+
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: const Icon(Icons.person, color: Colors.white, size: 32),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.regno,
+                                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    const Divider(color: Colors.white24),
+                    const SizedBox(height: 16),
+                    _buildInfoRow(Icons.school, widget.program),
+                    const SizedBox(height: 12),
+                    _buildInfoRow(Icons.analytics, widget.specialization),
+                    const SizedBox(height: 12),
+                    _buildInfoRow(Icons.book, 'Semester ${widget.semester}'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
