@@ -126,7 +126,7 @@ class _ClubDetailsScreenState extends State<ClubDetailsScreen> {
           SnackBar(
             content: Text(
               newStatus
-                  ? 'You subscribed! You will receive mail when ${widget.club.name} uploads'
+                  ? 'You subscribed! You will receive notifications when ${widget.club.name} uploads'
                   : 'You unsubscribed from ${widget.club.name}',
             ),
             duration: const Duration(seconds: 3),

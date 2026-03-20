@@ -4,6 +4,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 
+// IMPORTANT: Import Firebase Messaging for subscription management
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+
 class ApiService {
   final String baseUrl = "https://microservice-console.onrender.com";
 
@@ -94,16 +98,91 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> toggleSubscription(String clubId, String email) async {
-    print("Toggling subscription for clubId: $clubId, email: $email");
-    final response = await http.post(
-      Uri.parse('$baseUrl/clubs/$clubId/subscribe'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {'subscriber_email': email},
-    ).timeout(_defaultTimeout);
 
-    if (response.statusCode == 200) return jsonDecode(response.body);
-    throw Exception("Failed to toggle subscription");
+  Future<Map<String, dynamic>> toggleSubscription(String clubId, String email) async {
+  print("Toggling subscription for clubId: $clubId, email: $email");
+
+  final response = await http.post(
+    Uri.parse('$baseUrl/clubs/$clubId/subscribe'),
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: {'subscriber_email': email},
+  ).timeout(_defaultTimeout);
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+
+    print("Subscription toggle response: $data");
+
+    final String status = data['status'] ?? '';
+    final String topic = "club_$clubId";
+
+    try {
+      if (status == "subscribed") {
+        await FirebaseMessaging.instance.subscribeToTopic(topic);
+        print("✅ Subscribed to topic: $topic");
+      } else if (status == "unsubscribed") {
+        await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
+        print("❌ Unsubscribed from topic: $topic");
+      } else {
+        print("⚠ Unknown subscription status: $status");
+      }
+    } catch (e) {
+      print("⚠ FCM topic update failed: $e");
+    }
+
+    return data;
+  }
+
+  throw Exception("Failed to toggle subscription");
+}
+
+  /// Auto-resubscribe to Firebase topics for clubs the user is subscribed to.
+  /// Call this after app initialization, login, or when FCM token is refreshed.
+  /// This ensures the user receives notifications even after app reinstall or token expiry.
+  Future<void> autoResubscribeToClubs(String userEmail) async {
+    print("🔄 Starting auto-resubscription for email: $userEmail");
+    
+    try {
+      final clubs = await getClubs(forceRefresh: true);
+      
+      for (var club in clubs) {
+        // Check if the user is already a subscriber of this club
+        if (club.subscribers.contains(userEmail)) {
+          final String topic = "club_${club.id}";
+          
+          try {
+            await FirebaseMessaging.instance.subscribeToTopic(topic);
+            print("✅ Auto-resubscribed to topic: $topic (${club.name})");
+          } catch (e) {
+            print("⚠ Failed to auto-resubscribe to topic $topic: $e");
+          }
+        }
+      }
+      
+      print("✅ Auto-resubscription completed for $userEmail");
+    } catch (e) {
+      print("❌ Auto-resubscription failed: $e");
+      rethrow;
+    }
+  }
+
+  /// Manually sync Firebase subscriptions with known subscribed clubs.
+  /// Use this if you have a cached list of subscribed club IDs.
+  Future<void> syncFirebaseSubscriptions(List<String> subscribedClubIds) async {
+    print("🔄 Syncing Firebase subscriptions for ${subscribedClubIds.length} club(s)");
+    
+    for (var clubId in subscribedClubIds) {
+      final String topic = "club_$clubId";
+      
+      try {
+        await FirebaseMessaging.instance.subscribeToTopic(topic);
+        print("✅ Synced subscription to topic: $topic");
+      } catch (e) {
+        print("⚠ Failed to sync topic $topic: $e");
+      }
+    }
+    
+    print("✅ Firebase subscription sync completed");
   }
 
   Future<Club> createClub({
@@ -258,6 +337,8 @@ class ApiService {
     String individualEmail = "",
     String expiryTime = "",
     List<File>? images,
+    bool sendEmail = false,
+    bool sendNotification = true,
   }) async {
     var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/posts'));
     request.fields['owner_individual'] = ownerIndividual.toString();
@@ -266,6 +347,8 @@ class ApiService {
     request.fields['club_pass'] = clubPass;
     request.fields['individual_email'] = individualEmail;
     request.fields['expiry_time'] = expiryTime;
+    request.fields['send_email'] = sendEmail.toString();
+    request.fields['send_notification'] = sendNotification.toString();
 
     if (images != null) {
       for (var file in images) {

@@ -35,6 +35,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   double _expiryDays = 7; 
   bool _isUploading = false;
   String _truncatedUserEmail = "";
+  bool _sendEmail = false;
+  bool _sendNotification = true;
 
   @override
   void initState() {
@@ -151,6 +153,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         individualEmail: _truncatedUserEmail,
         expiryTime: _calculateExpiryTimestamp(),
         images: _selectedImages.isNotEmpty ? _selectedImages : null,
+        sendEmail: _sendEmail,
+        sendNotification: _sendNotification,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -255,6 +259,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
             ),
             _buildDurationControl(),
+            if (!_isIndividual) _buildNotificationOptions(),
             _buildDisclaimer(),
             _buildRegisterClubPrompt(),
             const SizedBox(height: 60),
@@ -402,6 +407,46 @@ Widget _buildModernInput(
             activeColor: kAccentWhite,
             inactiveColor: kGlassWhite,
             onChanged: (v) => setState(() => _expiryDays = v),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationOptions() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: kCardGrey, borderRadius: BorderRadius.circular(30)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("NOTIFICATION OPTIONS", style: TextStyle(color: kMutedWhite, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1.5)),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Send Notification", style: TextStyle(color: kAccentWhite, fontSize: 14)),
+              Switch(
+                value: _sendNotification,
+                onChanged: (value) => setState(() => _sendNotification = value),
+                activeColor: kAccentWhite,
+                activeTrackColor: kSoftGrey,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Send Email", style: TextStyle(color: kAccentWhite, fontSize: 14)),
+              Switch(
+                value: _sendEmail,
+                onChanged: (value) => setState(() => _sendEmail = value),
+                activeColor: kAccentWhite,
+                activeTrackColor: kSoftGrey,
+              ),
+            ],
           ),
         ],
       ),

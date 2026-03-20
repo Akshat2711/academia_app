@@ -4,7 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
 // IMPORTANT: Import your announcement service
-// Update this path to match your project structure
 import '../services/announcement_data.dart';
 
 // IMPORTANT: Import  video URL service
@@ -42,6 +41,7 @@ class _SlidingProfileAnnouncementWidgetState
   late VideoPlayerController _videoController;
   bool _videoInitializationFailed = false;
   bool _videoControllerReady = false;
+  bool _isProfilePageVisible = true; // Track if profile card is currently visible
 
   @override
   void initState() {
@@ -81,8 +81,12 @@ Future<void> _initializeVideoPlayer() async {
 
     _videoController
       ..setLooping(true)
-      ..setVolume(0)
-      ..play();
+      ..setVolume(0);
+
+    // Only play if profile page is currently visible
+    if (_isProfilePageVisible) {
+      _videoController.play();
+    }
 
     if (mounted) {
       setState(() {
@@ -203,7 +207,9 @@ Future<void> _initializeVideoPlayer() async {
   void dispose() {
     _timer?.cancel();
     _pageController.dispose();
+    // Pause and dispose video immediately to release buffers
     if (_videoControllerReady) {
+      _videoController.pause();
       _videoController.dispose();
     }
     super.dispose();
@@ -216,6 +222,21 @@ Future<void> _initializeVideoPlayer() async {
       child: PageView(
         controller: _pageController,
         onPageChanged: (index) {
+          // Track visibility state
+          _isProfilePageVisible = (index == 0);
+          
+          // Pause video when not on profile page, resume when on it
+          if (_videoControllerReady && _videoController.value.isInitialized) {
+            if (index == 0) {
+              // Only resume if initialization already succeeded
+              if (!_videoInitializationFailed) {
+                _videoController.play();
+              }
+            } else {
+              // Immediately pause to free buffers
+              _videoController.pause();
+            }
+          }
           // Reset timer when user manually swipes
           _pauseAutoSlide();
           _resumeAutoSlide();

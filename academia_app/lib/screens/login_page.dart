@@ -8,6 +8,7 @@ import 'package:lottie/lottie.dart';
 import '../utils/responsive_helper.dart';
 import '../utils/day_order_backup.dart'; 
 import 'package:academia_app/screens/dasboardscreen.dart';
+import '../club_events_social/services/club_main_service.dart';
 
 class CLoginPage extends StatefulWidget {
   const CLoginPage({super.key});
@@ -151,6 +152,15 @@ class _CLoginPageState extends State<CLoginPage> {
 
         await prefs.setString('userData', jsonEncode(data));
         await prefs.setString('lastRefreshTime', DateTime.now().toIso8601String());
+
+        // Extract email part before @ and auto-resubscribe to clubs
+        final emailPart = email.split('@')[0];
+        try {
+          await ApiService().autoResubscribeToClubs(emailPart);
+        } catch (e) {
+          print('⚠ Auto-resubscription failed: $e');
+          // Continue with login even if auto-resubscription fails
+        }
 
         if (mounted) {
           Navigator.pushReplacement(
