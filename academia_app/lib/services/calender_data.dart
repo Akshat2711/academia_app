@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class CalendarCache {
   static Map<String, Map<String, dynamic>>? lastData;
   static DateTime? lastRefresh;
-  static const Duration cacheDuration = Duration(hours:2); // Cache limit
+  static const Duration cacheDuration = Duration(hours:4); // Cache limit
 }
 
 /// Fetch calendar events with caching logic
@@ -52,7 +52,7 @@ Future<Map<String, Map<String, dynamic>>> getEventsData() async {
 
     final snapshot = await db.collection('calendar').get(
       GetOptions(
-        source: isOffline ? Source.cache : Source.serverAndCache,
+        source: isOffline ? Source.cache : Source.server,
       ),
     );
 

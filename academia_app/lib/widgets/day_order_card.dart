@@ -384,7 +384,7 @@ class _DayOrderCardState extends State<DayOrderCard> {
                 },
               ),
             ),
-          const SizedBox(height: 46), 
+          const SizedBox(height: 66), 
         ],
       ),
     );

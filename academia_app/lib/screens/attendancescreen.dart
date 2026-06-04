@@ -84,7 +84,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         elevation: 0,
         centerTitle: false,
       ),
-      floatingActionButton: _courses.isNotEmpty ? _buildFab() : null,
       body: _loading 
           ? const Center(child: CircularProgressIndicator(color: _navyBlue)) 
           : ListView(
@@ -102,35 +101,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     );
   }
 
-  Widget _buildFab() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 75),
-      child: FloatingActionButton.extended(
-        onPressed: () {
-          HapticFeedback.lightImpact();
-          Navigator.push(
-            context,
-            CupertinoPageRoute(
-              builder: (context) => AttendancePredictor(courses: _courses),
-            ),
-          );
-        },
-        backgroundColor: const Color.fromARGB(167, 17, 85, 152),
-        foregroundColor: const Color.fromARGB(255, 235, 231, 231),
-        elevation: 4,
-        icon: const Icon(Icons.timeline, size: 20),
-        label: const Text(
-          'Predict',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-        ),
 
-        // Add custom border radius
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20), 
-        ),
-      ),
-    );
-  }
 
 
   Widget _buildOverallCard() {
@@ -231,6 +202,39 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 _buildVerticalDivider(),
                 _buildStat('$_totalAbsent', 'Absent'),
               ],
+            ),
+
+          ),
+        const SizedBox(height: 16),
+        SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(
+                context,
+                CupertinoPageRoute(
+                  builder: (context) => AttendancePredictor(courses: _courses),
+                ),
+              );
+            },
+              icon: const Icon(Icons.line_axis, size: 18, color: Colors.white),
+              label: const Text(
+                'Predict Attendance',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 195, 190, 190).withOpacity(0.1),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                ),
+              ),
             ),
           ),
         ],

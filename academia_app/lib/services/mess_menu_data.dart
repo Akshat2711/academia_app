@@ -1,58 +1,98 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 typedef MessMenuMap = Map<String, dynamic>;
 
 class MessMenuCache {
-  // Stores the entire nested JSON (sanasi and mblock)
-  static MessMenuMap? lastData;
-  static DateTime? lastRefresh;
-  static const Duration cacheDuration = Duration(days:10); // ✅ cache for 10 days
+  static const String dataKey = "mess_menu_data";
+  static const String timeKey = "mess_menu_last_refresh";
+  static const Duration cacheDuration = Duration(days: 10);
+
+  // optional in-memory cache (fast access)
+  static MessMenuMap? memoryData;
+  static DateTime? memoryTime;
 }
 
 class MessMenuService {
   static Future<MessMenuMap?> getMessMenu() async {
-    final FirebaseFirestore db = FirebaseFirestore.instance;
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
 
-    // 1. Check Memory Cache
-    if (MessMenuCache.lastData != null &&
-        MessMenuCache.lastRefresh != null &&
-        DateTime.now().difference(MessMenuCache.lastRefresh!) <
+    // 🔹 1. Check MEMORY cache first (fastest)
+    if (MessMenuCache.memoryData != null &&
+        MessMenuCache.memoryTime != null &&
+        now.difference(MessMenuCache.memoryTime!) <
             MessMenuCache.cacheDuration) {
-      print("⚡ Using cached mess menu (Memory)");
-      return MessMenuCache.lastData;
+      print("⚡ Using memory cache");
+      return MessMenuCache.memoryData;
     }
 
-    print("☁ Fetching mess menu from Firestore...");
+    // 🔹 2. Check PERSISTENT cache (SharedPreferences)
+    final cachedJson = prefs.getString(MessMenuCache.dataKey);
+    final cachedTime = prefs.getInt(MessMenuCache.timeKey);
+
+    if (cachedJson != null && cachedTime != null) {
+      final savedTime =
+          DateTime.fromMillisecondsSinceEpoch(cachedTime);
+
+      if (now.difference(savedTime) <
+          MessMenuCache.cacheDuration) {
+        print("📦 Using persistent cache");
+
+        final decoded =
+            Map<String, dynamic>.from(jsonDecode(cachedJson));
+
+        // update memory cache
+        MessMenuCache.memoryData = decoded;
+        MessMenuCache.memoryTime = savedTime;
+
+        return decoded;
+      }
+    }
+
+    // 🔴 3. Fetch from Firestore ONLY if cache expired
+    print("☁ Fetching from Firestore...");
+    final db = FirebaseFirestore.instance;
 
     try {
-      final connectivity = await Connectivity().checkConnectivity();
-      bool isOffline = connectivity == ConnectivityResult.none;
-
-      // 2. Fetch specific document 'messmenu' from 'mess' collection
-      final docSnapshot = await db.collection('mess').doc('messmenu').get(
-            GetOptions(
-              source: isOffline ? Source.cache : Source.serverAndCache,
-            ),
-          );
+      final docSnapshot = await db
+          .collection('mess')
+          .doc('messmenu')
+          .get(const GetOptions(source: Source.server));
 
       if (docSnapshot.exists) {
-        MessMenuMap data = Map<String, dynamic>.from(docSnapshot.data()!);
+        final data =
+            Map<String, dynamic>.from(docSnapshot.data()!);
 
-        // 3. Update Cache
-        MessMenuCache.lastData = data;
-        MessMenuCache.lastRefresh = DateTime.now();
+        // 🔹 Save to persistent cache
+        await prefs.setString(
+          MessMenuCache.dataKey,
+          jsonEncode(data),
+        );
 
-        print("✅ Mess menu refreshed from ${isOffline ? 'cache' : 'server'}");
+        await prefs.setInt(
+          MessMenuCache.timeKey,
+          now.millisecondsSinceEpoch,
+        );
+
+        // 🔹 Update memory cache
+        MessMenuCache.memoryData = data;
+        MessMenuCache.memoryTime = now;
+
+        print("✅ Data saved (persistent + memory)");
+
         return data;
       }
     } catch (e) {
-      print("❌ Error fetching mess menu: $e");
+      print("❌ Firestore fetch failed: $e");
 
-      // 4. Fallback to stale cache if server fetch fails
-      if (MessMenuCache.lastData != null) {
-        print("⚠ Using stale memory cache due to error");
-        return MessMenuCache.lastData;
+      // 🔹 fallback to stale persistent cache
+      if (cachedJson != null) {
+        print("⚠ Using stale persistent cache");
+
+        return Map<String, dynamic>.from(
+            jsonDecode(cachedJson));
       }
     }
 

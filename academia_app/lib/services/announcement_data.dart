@@ -1,57 +1,81 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 typedef AnnouncementMap = Map<String, dynamic>;
 
 class AnnouncementCache {
-  static Map<String, AnnouncementMap>? lastData;
-  static DateTime? lastRefresh;
-  static const Duration cacheDuration = Duration(hours: 1); // ✅ Set cache time
+  static const String dataKey = "announcement_data";
+  static const String timeKey = "announcement_last_refresh";
+  static const Duration cacheDuration = Duration(hours: 2);
 }
 
 Future<Map<String, AnnouncementMap>> getEventsData() async {
   final FirebaseFirestore db = FirebaseFirestore.instance;
+  final prefs = await SharedPreferences.getInstance();
 
-  // ✅ If data exists AND last refresh was within 10 min → Return cached data
-  if (AnnouncementCache.lastData != null &&
-      AnnouncementCache.lastRefresh != null &&
-      DateTime.now().difference(AnnouncementCache.lastRefresh!) <
-          AnnouncementCache.cacheDuration) {
-    print("⚡ Using cached announcement data (no Firestore call)");
-    return AnnouncementCache.lastData!;
+  // 🔹 Step 1: Check stored timestamp
+  final lastRefreshMillis = prefs.getInt(AnnouncementCache.timeKey);
+  final now = DateTime.now();
+
+  if (lastRefreshMillis != null) {
+    final lastRefresh =
+        DateTime.fromMillisecondsSinceEpoch(lastRefreshMillis);
+
+    if (now.difference(lastRefresh) < AnnouncementCache.cacheDuration) {
+      // 🔹 Load cached data
+      final cachedString = prefs.getString(AnnouncementCache.dataKey);
+
+      if (cachedString != null) {
+        print("⚡ Using persistent cached data (no Firestore call)");
+
+        final Map<String, dynamic> decoded = jsonDecode(cachedString);
+
+        return decoded.map((key, value) =>
+            MapEntry(key, Map<String, dynamic>.from(value)));
+      }
+    }
   }
 
-  print("☁ Fetching announcement data from Firestore...");
+  // 🔴 Only reaches here if cache expired or not present
+  print("☁ Fetching from Firestore...");
 
   Map<String, AnnouncementMap> eventsData = {};
 
   try {
-    final connectivity = await Connectivity().checkConnectivity();
-    bool isOffline = connectivity == ConnectivityResult.none;
-
     final snapshot = await db.collection('announcement').get(
-      GetOptions(
-        source: isOffline ? Source.cache : Source.serverAndCache,
-      ),
+      const GetOptions(source: Source.server), // 🔥 FORCE server ONLY when needed
     );
 
     for (var doc in snapshot.docs) {
-      eventsData[doc.id] = Map<String, dynamic>.from(doc.data() as Map);
+      eventsData[doc.id] = Map<String, dynamic>.from(doc.data());
     }
 
-    // ✅ Save to cache
-    AnnouncementCache.lastData = eventsData;
-    AnnouncementCache.lastRefresh = DateTime.now();
+    // 🔹 Save to SharedPreferences
+    await prefs.setString(
+      AnnouncementCache.dataKey,
+      jsonEncode(eventsData),
+    );
 
-    print("✅ Data refreshed from ${isOffline ? 'cache' : 'server/cache'}");
+    await prefs.setInt(
+      AnnouncementCache.timeKey,
+      now.millisecondsSinceEpoch,
+    );
+
+    print("✅ Data saved locally");
 
   } catch (e) {
-    print("❌ Error during fetch: $e");
+    print("❌ Firestore fetch failed: $e");
 
-    // ✅ If fetch fails but we have cache → return that instead of empty
-    if (AnnouncementCache.lastData != null) {
-      print("⚠ Using previous cached data due to error");
-      return AnnouncementCache.lastData!;
+    // 🔹 Fallback to cache even if expired
+    final cachedString = prefs.getString(AnnouncementCache.dataKey);
+    if (cachedString != null) {
+      print("⚠ Using stale cached data");
+
+      final Map<String, dynamic> decoded = jsonDecode(cachedString);
+
+      return decoded.map((key, value) =>
+          MapEntry(key, Map<String, dynamic>.from(value)));
     }
   }
 
