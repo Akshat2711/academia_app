@@ -1,16 +1,11 @@
-# academia_app
+# Academia App Flutter Module
 
-A new Flutter project.
+The repository-level [README](../README.md) contains the project overview, architecture, setup instructions, contribution rules, and open-source readiness checklist.
 
-## Getting Started
+This directory is the Flutter application module. Run Flutter commands from here, for example:
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter pub get
+flutter analyze
+flutter test
+```

@@ -342,7 +342,130 @@ CALENDAR_DATA = {
 
 
 2026 2nd half:
+CALENDAR_DATA = {
+    # --- JULY 2026 ---
+    "4_7_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "5_7_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "11_7_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "12_7_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "18_7_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "19_7_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "25_7_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "26_7_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    # --- AUGUST 2026 ---
+    "1_8_2026": {
+        "event": [
+            {
+                "type": "event",
+                "desc": "Enrolment Day Starts B.Tech - I / M.Tech (Int) - I (Year)",
+            },
+            {"type": "holiday", "desc": "Weekend Holiday"},
+        ]
+    },
+    "2_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "3_8_2026": {
+        "event": [
+            {
+                "type": "event",
+                "desc": "Enrolment Day Starts B. Arch & B. Des - I (Year) / Commencement of Classes for Minor Degree",
+            }
+        ]
+    },
+    "7_8_2026": {
+        "event": [
+            {
+                "type": "event",
+                "desc": "Enrolment Day Ends with B.Tech - I / M.Tech (Int) - I / B. Arch & B. Des - I(Year)",
+            }
+        ]
+    },
+    "8_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "9_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "15_8_2026": {
+        "event": [
+            {"type": "holiday", "desc": "Independence Day - Holiday"},
+            {"type": "holiday", "desc": "Weekend Holiday"},
+        ]
+    },
+    "16_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "17_8_2026": {
+        "event": [
+            {
+                "type": "event",
+                "desc": "Commencement of Classes for B. Tech - I / M. Tech (Int) - I / B .Arch & B. Des - I (Year)",
+            }
+        ]
+    },
+    "22_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "23_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "29_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "30_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    # --- SEPTEMBER 2026 ---
+    "4_9_2026": {
+        "event": [{"type": "holiday", "desc": "Krishna Jayanthi - Holiday"}]
+    },
+    "5_9_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "6_9_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "12_9_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "13_9_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "14_9_2026": {
+        "event": [
+            {"type": "holiday", "desc": "Vinayakar Chathurthi - Holiday"}
+        ]
+    },
+    "19_9_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "20_9_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "26_9_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "27_9_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    # --- OCTOBER 2026 ---
+    "2_10_2026": {
+        "event": [{"type": "holiday", "desc": "Gandhi Jayanthi - Holiday"}]
+    },
+    "3_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "4_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "10_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "11_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "17_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "18_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "24_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "25_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "31_10_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    # --- NOVEMBER 2026 ---
+    "1_11_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "7_11_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "8_11_2026": {
+        "event": [
+            {"type": "holiday", "desc": "Deepavali - Holiday"},
+            {"type": "holiday", "desc": "Weekend Holiday"},
+        ]
+    },
+    "14_11_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "15_11_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "21_11_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "22_11_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "28_11_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "29_11_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    # --- DECEMBER 2026 ---
+    "5_12_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "6_12_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "7_12_2026": {
+        "event": [
+            {
+                "type": "event",
+                "desc": "Last Working Day - B.Tech - I / M.Tech (Int) - I / B. Arch & B. Des - I  (Year)",
+            }
+        ]
+    },
+    "12_12_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "13_12_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "19_12_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "20_12_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "26_12_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "27_12_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+}
 
+
+2027 1 st half:
 
 
 

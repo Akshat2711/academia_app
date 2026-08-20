@@ -2,3 +2,18 @@ exeriment_ground
 academia_app/firebase.json
 academia_app/lib/firebase_options.dart
 academia_app/android/app/google-services.json
+
+# Local credentials and machine-specific configuration
+**/google-services.json
+**/firebase_options.dart
+**/key.properties
+**/*.jks
+**/*.keystore
+exeriment_ground/**/drive_api.json
+exeriment_ground/**/token.pickle
+exeriment_ground/*firebase-adminsdk*.json
+
+# Local Python environments and generated content
+**/.venv/
+**/venv/
+exeriment_ground/content_extraction/downloaded_resources/
