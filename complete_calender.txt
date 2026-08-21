@@ -398,6 +398,7 @@ CALENDAR_DATA = {
     },
     "22_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
     "23_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
+    "24_8_2026": {"event": [{"type": "holiday", "desc": "Chancellor's birthday"}]},
     "29_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
     "30_8_2026": {"event": [{"type": "holiday", "desc": "Weekend Holiday"}]},
     # --- SEPTEMBER 2026 ---
