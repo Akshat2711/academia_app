@@ -66,9 +66,12 @@ Future<void> _initializeVideoPlayer() async {
       throw Exception("No video URL available");
     }
 
-    _videoController = VideoPlayerController.networkUrl(
-      Uri.parse(url),
-    );
+  _videoController = VideoPlayerController.networkUrl(
+  Uri.parse(url),
+  videoPlayerOptions: VideoPlayerOptions(
+    mixWithOthers: true,
+  ),
+);
     _videoControllerReady = true;
 
     await _videoController.initialize();
