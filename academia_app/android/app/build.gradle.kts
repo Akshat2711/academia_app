@@ -42,14 +42,16 @@ android {
     }
 
     // 🧩 Add your keystore signing configuration
-    signingConfigs {
-        create("release") {
+signingConfigs {
+    create("release") {
+        if (keystorePropertiesFile.exists()) {
             keyAlias = keystoreProperties["keyAlias"] as String
             keyPassword = keystoreProperties["keyPassword"] as String
             storeFile = file(keystoreProperties["storeFile"] as String)
             storePassword = keystoreProperties["storePassword"] as String
         }
     }
+}
 
     buildTypes {
         release {
