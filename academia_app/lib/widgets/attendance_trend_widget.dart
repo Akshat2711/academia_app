@@ -151,10 +151,7 @@ class AttendanceTrendWidget extends StatefulWidget {
 
 class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
   // --- BLUE SHADES ONLY COLOR PALETTE ---
-  static const Color _navyBlue = Color(0xFF2C5F9E);
-  static const Color _lightNavy = Color(0xFF4A7DC4);
   static const Color _skyBlue = Color(0xFF64B5F6);
-  static const Color _deepBlue = Color(0xFF1565C0);
   static const Color _white = Color(0xFFFFFFFF);
 
   List<AttendanceTrendData> _trendData = [];
@@ -315,7 +312,7 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
             child: Text(
               'No attendance history available yet',
               style: TextStyle(
-                color: _white.withOpacity(0.2),
+                color: _white.withValues(alpha:0.2),
                 fontSize: 12,
               ),
             ),
@@ -332,7 +329,7 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _white.withOpacity(0.02),
+            color: _white.withValues(alpha:0.02),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -340,7 +337,7 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _skyBlue.withOpacity(0.1),
+                  color: _skyBlue.withValues(alpha:0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -354,7 +351,7 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
                 child: Text(
                   'Initial point: ${displayData.first.percentage.toStringAsFixed(1)}% recorded on ${displayData.first.date}',
                   style: TextStyle(
-                    color: _white.withOpacity(0.5),
+                    color: _white.withValues(alpha:0.5),
                     fontSize: 11,
                   ),
                 ),
@@ -380,7 +377,7 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
               data: displayData,
               lineColor: _skyBlue,
               dotColor: _white,
-              targetLineColor: _white.withOpacity(0.1),
+              targetLineColor: _white.withValues(alpha:0.1),
             ),
           ),
         ),
@@ -402,7 +399,7 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
                   dayName,
                   style: TextStyle(
                     fontSize: 9,
-                    color: isToday ? _skyBlue : _white.withOpacity(0.3),
+                    color: isToday ? _skyBlue : _white.withValues(alpha:0.3),
                     fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
@@ -411,7 +408,7 @@ class _AttendanceTrendWidgetState extends State<AttendanceTrendWidget> {
                   '${data.percentage.toStringAsFixed(1)}%',
                   style: TextStyle(
                     fontSize: 11,
-                    color: isToday ? _white : _white.withOpacity(0.6),
+                    color: isToday ? _white : _white.withValues(alpha:0.6),
                     fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
                   ),
                 ),
@@ -483,7 +480,7 @@ class _LineGraphPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [lineColor.withOpacity(0.15), lineColor.withOpacity(0)],
+        colors: [lineColor.withValues(alpha:0.15), lineColor.withValues(alpha:0)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)));
 
     // 3. Draw Smooth Line
@@ -506,7 +503,7 @@ class _LineGraphPainter extends CustomPainter {
       final isLast = i == points.length - 1;
       // Shadow/Glow
       canvas.drawCircle(points[i], isLast ? 6 : 4, Paint()
-        ..color = lineColor.withOpacity(0.3)
+        ..color = lineColor.withValues(alpha:0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
       // Point
       canvas.drawCircle(points[i], isLast ? 3.5 : 2.5, Paint()..color = isLast ? dotColor : lineColor);

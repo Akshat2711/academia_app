@@ -1,4 +1,5 @@
 // File: calender_widgets.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart'; // Import for launching URLs
 import 'dart:async'; // Import for Future/async
@@ -17,7 +18,7 @@ Future<void> _launchUrl(String urlString) async {
   if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
     // In a production app, you would show a SnackBar or AlertDialog here
     // ignore: avoid_print
-    print('Could not launch $uri'); 
+    if (kDebugMode) debugPrint('Could not launch $uri'); 
   }
 }
 
@@ -29,11 +30,11 @@ class CreateEventBottomSheet extends StatefulWidget {
   final Map<String, dynamic>? initialData;
 
  const CreateEventBottomSheet({
-  Key? key,
+  super.key,
   required this.onSave,
   this.isEditing = false,
   this.initialData,
-}) : super(key: key);
+});
 
   @override
   State<CreateEventBottomSheet> createState() => _CreateEventBottomSheetState();
@@ -47,7 +48,7 @@ class _CreateEventBottomSheetState extends State<CreateEventBottomSheet> {
   String _title = '';
   String _description = '';
   String _priority = 'mid'; // Default priority
-  String _type = 'custom'; // Default type
+  final String _type = 'custom'; // Default type
   bool _notificationEnabled = false;
 
   @override
@@ -86,8 +87,7 @@ class _CreateEventBottomSheetState extends State<CreateEventBottomSheet> {
               onPrimary: Colors.white,
               surface: Color(0xFF1A1A1A),
               onSurface: Colors.white,
-            ),
-            dialogBackgroundColor: const Color(0xFF1A1A1A),
+            ), dialogTheme: DialogThemeData(backgroundColor: const Color(0xFF1A1A1A)),
           ),
           child: child!,
         );
@@ -113,8 +113,7 @@ class _CreateEventBottomSheetState extends State<CreateEventBottomSheet> {
               onPrimary: Colors.white,
               surface: Color(0xFF1A1A1A),
               onSurface: Colors.white,
-            ),
-            dialogBackgroundColor: const Color(0xFF1A1A1A),
+            ), dialogTheme: DialogThemeData(backgroundColor: const Color(0xFF1A1A1A)),
           ),
           child: child!,
         );
@@ -286,7 +285,7 @@ class _CreateEventBottomSheetState extends State<CreateEventBottomSheet> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isSelected
-                            ? color.withOpacity(0.9)
+                            ? color.withValues(alpha:0.9)
                             : const Color(0xFF1A1A1A),
               
                       ),
@@ -468,14 +467,14 @@ class DateCellWidget extends StatelessWidget {
   final String? dayOrder; 
 
   const DateCellWidget({
-    Key? key,
+    super.key,
     required this.day,
     required this.isToday,
     required this.hasEvents,
     required this.events,
     required this.getEventColor,
     this.dayOrder, 
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -508,7 +507,7 @@ class DateCellWidget extends StatelessWidget {
           decoration: BoxDecoration(
               color: isToday 
               ? const Color.fromARGB(255, 120, 119, 119) 
-              : (hasEvents ? mainColor.withOpacity(0.2) : Colors.transparent),
+              : (hasEvents ? mainColor.withValues(alpha:0.2) : Colors.transparent),
             shape: BoxShape.circle,
             border: Border.all(
               color: isToday ? const Color.fromARGB(255, 130, 129, 129) : (hasEvents ? mainColor : Colors.transparent),
@@ -583,10 +582,10 @@ class EventItemWidget extends StatelessWidget {
   final GetEventColor getEventColor;
 
   const EventItemWidget({
-    Key? key,
+    super.key,
     required this.event,
     required this.getEventColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -600,7 +599,7 @@ class EventItemWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF2A2A2A),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5), width: 2),
+        border: Border.all(color: color.withValues(alpha:0.5), width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,10 +700,10 @@ class LegendItemWidget extends StatelessWidget {
   final Color color;
 
   const LegendItemWidget({
-    Key? key,
+    super.key,
     required this.label,
     required this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

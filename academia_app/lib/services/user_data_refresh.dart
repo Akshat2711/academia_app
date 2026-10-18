@@ -1,38 +1,51 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/day_order_backup.dart';
 
+String _encodeJson(Map<String, dynamic> data) => jsonEncode(data);
+Map<String, dynamic> _decodeJson(String source) => jsonDecode(source);
 
 class DataRefreshService {
   static Future<bool> refreshData() async {
     try {
+      debugPrint('[SRM REFRESH] Starting background refresh...');
       final prefs = await SharedPreferences.getInstance();
       final email = prefs.getString('userEmail');
       final password = prefs.getString('userPassword');
-      
-      // 1. Read existing userData string
-      final userDataString = prefs.getString('userData');
-      Map<String, dynamic>? sessionData;
 
-      if (userDataString != null) {
-        final Map<String, dynamic> fullData = jsonDecode(userDataString);
-        // Extract session_data from the existing blob
-        sessionData = fullData['session_data'];
-      }
-
-      if (email == null || password == null) {
-        print("❌ Background refresh failed: no credentials");
+      if (email == null || password == null || email == 'guest@srmist.edu.in' || password == 'guest') {
+        if (kDebugMode) {
+          debugPrint("ℹ Background refresh skipped: guest mode or no credentials");
+        }
         return false;
       }
 
-      final url = Uri.parse('https://academia-scrapper-api-fast.onrender.com/scrape');
-      
+      // 1. Read existing userData string
+      final userDataString = prefs.getString('userData');
+      Map<String, dynamic>? sessionData;
+      Map<String, dynamic>? fullData;
+
+      if (userDataString != null && userDataString.isNotEmpty) {
+        fullData = await compute(
+          _decodeJson,
+          userDataString,
+        );
+        // Extract session_data from the existing blob
+        sessionData = fullData?['session_data'];
+      }
+
+      final url = Uri.parse(
+        'https://academia-scrapper-api-fast.onrender.com/scrape',
+      );
+
       // 2. Build the request body
       final Map<String, dynamic> requestBody = {
         "email": email,
         "password": password,
-        if (sessionData != null) "session_data": sessionData, // Inline null check
+        if (sessionData != null)
+          "session_data": sessionData, // Inline null check
       };
 
       final response = await http.post(
@@ -44,12 +57,52 @@ class DataRefreshService {
         body: jsonEncode(requestBody),
       );
 
+      debugPrint('[SRM REFRESH] HTTP Status: ${response.statusCode}');
       if (response.statusCode != 200) {
-        print("❌ Background API failed: ${response.statusCode}");
+        if (kDebugMode) {
+          debugPrint("❌ Background API failed: ${response.statusCode}");
+        }
         return false;
       }
 
-      final data = jsonDecode(response.body);
+      final data = await compute(_decodeJson, response.body);
+      if (data['status'] != 'success') {
+        if (kDebugMode) {
+          debugPrint("❌ Background API returned non-success status: ${data['status']}");
+        }
+        return false;
+      }
+
+      // Safeguard: Never overwrite valid cached academic data with empty or malformed responses
+      if (fullData != null) {
+        final existingAttendanceCourses = fullData['attendance']?['attendance']?['courses'];
+        final bool hadValidAttendance = existingAttendanceCourses is Map && existingAttendanceCourses.isNotEmpty;
+        final newAttendanceCourses = data['attendance']?['attendance']?['courses'];
+        final bool hasNewAttendance = newAttendanceCourses is Map && newAttendanceCourses.isNotEmpty;
+
+        if (hadValidAttendance && !hasNewAttendance) {
+          if (kDebugMode) {
+            debugPrint("⚠ Preserving cached attendance because refreshed payload has empty courses");
+          }
+          if (fullData['attendance'] != null) {
+            data['attendance'] = fullData['attendance'];
+          }
+        }
+
+        final existingTimetableCourses = fullData['timetable']?['courses'];
+        final bool hadValidTimetable = existingTimetableCourses is List && existingTimetableCourses.isNotEmpty;
+        final newTimetableCourses = data['timetable']?['courses'];
+        final bool hasNewTimetable = newTimetableCourses is List && newTimetableCourses.isNotEmpty;
+
+        if (hadValidTimetable && !hasNewTimetable) {
+          if (kDebugMode) {
+            debugPrint("⚠ Preserving cached timetable because refreshed payload has empty timetable");
+          }
+          if (fullData['timetable'] != null) {
+            data['timetable'] = fullData['timetable'];
+          }
+        }
+      }
 
       // 3. Handle Day Order (data -> attendance -> day_order)
       if (data['attendance']?['day_order'] != null) {
@@ -60,13 +113,22 @@ class DataRefreshService {
       }
 
       // 4. Save the entire new response (which includes updated session_data)
-      await prefs.setString('userData', jsonEncode(data));
-      await prefs.setString('lastRefreshTime', DateTime.now().toIso8601String());
+      final encodedData = await compute(
+        _encodeJson,
+        data,
+      );
+      await prefs.setString('userData', encodedData);
+      await prefs.setString(
+        'lastRefreshTime',
+        DateTime.now().toIso8601String(),
+      );
 
-      print("✅ Background refresh success using nested session data");
+      if (kDebugMode) {
+        debugPrint("✅ Background refresh success using nested session data");
+      }
       return true;
     } catch (e) {
-      print("❌ Background refresh error: $e");
+      if (kDebugMode) debugPrint("❌ Background refresh error: $e");
       return false;
     }
   }

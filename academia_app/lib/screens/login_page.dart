@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,7 +8,7 @@ import 'package:lottie/lottie.dart';
 
 // Assuming these paths remain the same in your project
 import '../utils/responsive_helper.dart';
-import '../utils/day_order_backup.dart'; 
+import '../utils/day_order_backup.dart';
 import 'package:academia_app/screens/dasboardscreen.dart';
 import '../club_events_social/services/club_main_service.dart';
 
@@ -16,6 +18,9 @@ class CLoginPage extends StatefulWidget {
   @override
   State<CLoginPage> createState() => _CLoginPageState();
 }
+
+Map<String, dynamic> _decodeJson(String source) => jsonDecode(source);
+String _encodeJson(Map<String, dynamic> data) => jsonEncode(data);
 
 class _CLoginPageState extends State<CLoginPage> {
   final TextEditingController _emailController = TextEditingController();
@@ -87,7 +92,10 @@ class _CLoginPageState extends State<CLoginPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Try Again', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Try Again',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               SizedBox(height: res.height(2)),
@@ -109,16 +117,16 @@ class _CLoginPageState extends State<CLoginPage> {
       _isLoading = true;
     });
 
-    final url = Uri.parse('https://academia-scrapper-api-fast.onrender.com/scrape');
+    final url = Uri.parse(
+      'https://academia-scrapper-api-fast.onrender.com/scrape',
+    );
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    final body = jsonEncode({
-      "email": email,
-      "password": password,
-    });
+    final body = jsonEncode({"email": email, "password": password});
 
     try {
+      debugPrint('[SRM AUTH] Starting login attempt');
       final response = await http.post(
         url,
         headers: {
@@ -128,15 +136,22 @@ class _CLoginPageState extends State<CLoginPage> {
         body: body,
       );
 
+      debugPrint('[SRM AUTH] HTTP Status: ${response.statusCode}');
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = await compute(_decodeJson, response.body);
+        if (data['status'] != 'success') {
+          final errorMsg = data['detail'] ?? data['message'] ?? 'Login failed. Please check credentials.';
+          _showErrorBottomSheet(errorMsg.toString());
+          return;
+        }
         final prefs = await SharedPreferences.getInstance();
 
         await prefs.setString('userEmail', email);
         await prefs.setString('userPassword', password);
 
         int? dayOrder;
-        if (data['attendance'] != null && data['attendance']['day_order'] != null) {
+        if (data['attendance'] != null &&
+            data['attendance']['day_order'] != null) {
           dayOrder = data['attendance']['day_order'] as int;
           await DayOrderManager.saveDayOrderData(
             currentDayOrder: dayOrder,
@@ -150,15 +165,22 @@ class _CLoginPageState extends State<CLoginPage> {
           }
         }
 
-        await prefs.setString('userData', jsonEncode(data));
-        await prefs.setString('lastRefreshTime', DateTime.now().toIso8601String());
+        final encodedData = await compute(
+          _encodeJson,
+          data,
+        );
+        await prefs.setString('userData', encodedData);
+        await prefs.setString(
+          'lastRefreshTime',
+          DateTime.now().toIso8601String(),
+        );
 
         // Extract email part before @ and auto-resubscribe to clubs
         final emailPart = email.split('@')[0];
         try {
           await ApiService().autoResubscribeToClubs(emailPart);
         } catch (e) {
-          print('⚠ Auto-resubscription failed: $e');
+          debugPrint('⚠ Auto-resubscription failed: $e');
           // Continue with login even if auto-resubscription fails
         }
 
@@ -173,13 +195,16 @@ class _CLoginPageState extends State<CLoginPage> {
         String errorMessage = 'Status Code: ${response.statusCode}';
         try {
           final errorData = jsonDecode(response.body);
-          errorMessage = errorData['detail'] ?? errorData['message'] ?? errorMessage;
+          errorMessage =
+              errorData['detail'] ?? errorData['message'] ?? errorMessage;
         } catch (_) {}
-        
+
         _showErrorBottomSheet(errorMessage);
       }
     } catch (e) {
-      _showErrorBottomSheet('Unable to connect to the server. Check your internet connection.');
+      _showErrorBottomSheet(
+        'Unable to connect to the server. Check your internet connection.',
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -271,7 +296,9 @@ class _CLoginPageState extends State<CLoginPage> {
                   onTap: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const DashboardScreen(),
+                      ),
                     );
                   },
                   child: Text(
@@ -309,7 +336,10 @@ class _CLoginPageState extends State<CLoginPage> {
         controller: controller,
         obscureText: isPassword && obscureText,
         keyboardType: keyboardType,
-        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(color: Colors.grey[400]),
@@ -317,7 +347,9 @@ class _CLoginPageState extends State<CLoginPage> {
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
-                    obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    obscureText
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     color: Colors.grey[600],
                   ),
                   onPressed: onTogglePassword,

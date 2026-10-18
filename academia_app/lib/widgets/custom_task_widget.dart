@@ -9,12 +9,12 @@ class CustomTaskCard extends StatelessWidget {
   final VoidCallback? onEdit;
 
   const CustomTaskCard({
-    Key? key,
+    super.key,
     required this.event,
     required this.date,
     this.onDelete,
     this.onEdit,
-  }) : super(key: key);
+  });
 
   // Helper to determine the priority color
   Color _getPriorityColor(String priority) {
@@ -180,7 +180,7 @@ class CustomTaskCard extends StatelessWidget {
             boxShadow: isPassed
                 ? [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.3),
+                      color: Colors.grey.withValues(alpha:0.3),
                       spreadRadius: 1,
                       blurRadius: 3,
                       offset: const Offset(0, 2),

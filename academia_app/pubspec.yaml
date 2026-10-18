@@ -87,7 +87,13 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_native_splash: ^2.4.6
   change_app_package_name: ^1.5.0
-
+  flutter_animate: ^4.5.2
+  webview_flutter: ^4.10.0
+  package_info_plus: ^10.2.1
+  share_plus: ^13.3.0
+  path_provider: ^2.1.6
+  html: ^0.15.7
+  workmanager: ^0.10.10
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -166,3 +172,6 @@ flutter_launcher_icons:
 
   adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/logo_console_new.png"
+get_it: ^7.6.0
+hive: ^2.2.3
+flutter_secure_storage: ^9.2.0

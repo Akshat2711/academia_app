@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/cupertino.dart';
 
 // --- PREMIUM DESIGN CONSTANTS ---
 const Color kPitchBlack = Color(0xFF000000);
@@ -256,14 +255,20 @@ class CourseDetailScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: kAccentOrange.withOpacity(0.1),
+            color: kAccentOrange.withValues(alpha:0.1),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: kAccentOrange.withOpacity(0.2)),
+            border: Border.all(color: kAccentOrange.withValues(alpha:0.2)),
           ),
           child: Text(code, style: const TextStyle(color: kAccentOrange, fontWeight: FontWeight.bold, fontSize: 11)),
         ),
         const SizedBox(height: 12),
-        Text(title, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+        Hero(
+          tag: 'course_title_$code',
+          child: Material(
+            type: MaterialType.transparency,
+            child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+          ),
+        ),
       ],
     );
   }
@@ -367,7 +372,7 @@ class CourseDetailScreen extends StatelessWidget {
                 width: 28, height: max(barHeight, 5.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [kAccentOrange, kAccentOrange.withOpacity(0.3)],
+                    colors: [kAccentOrange, kAccentOrange.withValues(alpha:0.3)],
                     begin: Alignment.topCenter, end: Alignment.bottomCenter,
                   ),
                   borderRadius: BorderRadius.circular(6),

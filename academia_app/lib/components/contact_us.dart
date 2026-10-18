@@ -1,22 +1,29 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import '../services/theme_controller.dart';
 
 class ContactUs extends StatelessWidget {
   const ContactUs({super.key});
 
-  static const Color _primaryColor = Colors.orange;
-
   @override
   Widget build(BuildContext context) {
-    return _buildContactSupport(context);
+    return ListenableBuilder(
+      listenable: ThemeController.instance,
+      builder: (context, _) {
+        final theme = ThemeController.instance;
+        return _buildContactSupport(context, theme);
+      }
+    );
   }
 
-  Widget _buildContactSupport(BuildContext context) {
+  Widget _buildContactSupport(BuildContext context, ThemeController theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
-          const Divider(color: Colors.white10),
+          Divider(color: theme.textSecondary.withValues(alpha: 0.1)),
           const SizedBox(height: 20),
 
           // Contact button
@@ -28,21 +35,21 @@ class ContactUs extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: theme.primaryAccent.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: _primaryColor.withOpacity(0.3),
+                  color: theme.primaryAccent.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.support_agent_rounded, color: _primaryColor, size: 22),
+                  Icon(Icons.support_agent_rounded, color: theme.primaryAccent, size: 22),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'HAVE QUERIES? CONTACT US',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: theme.textPrimary,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
                       fontSize: 13,
@@ -56,13 +63,21 @@ class ContactUs extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Version
-          Text(
-            'Version 1.31.26 • Built by Team Console',
-            style: TextStyle(
-              color: Colors.white24,
-              fontSize: 10,
-              letterSpacing: 0.5,
-            ),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final versionStr = snapshot.hasData 
+                  ? 'Version ${snapshot.data!.version} • Built by Team Console'
+                  : 'Built by Team Console';
+              return Text(
+                versionStr,
+                style: TextStyle(
+                  color: theme.textSecondary.withValues(alpha: 0.5),
+                  fontSize: 10,
+                  letterSpacing: 0.5,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -78,7 +93,7 @@ class ContactUs extends StatelessWidget {
       mode: LaunchMode.externalApplication, //Force open in browser
     )) {
 
-      print('Could not launch $url');
+      if (kDebugMode) debugPrint('Could not launch $url');
     }
   }
 }
