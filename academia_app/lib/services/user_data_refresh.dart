@@ -15,24 +15,25 @@ class DataRefreshService {
       final email = prefs.getString('userEmail');
       final password = prefs.getString('userPassword');
 
+      if (email == null || password == null || email == 'guest@srmist.edu.in' || password == 'guest') {
+        if (kDebugMode) {
+          debugPrint("ℹ Background refresh skipped: guest mode or no credentials");
+        }
+        return false;
+      }
+
       // 1. Read existing userData string
       final userDataString = prefs.getString('userData');
       Map<String, dynamic>? sessionData;
+      Map<String, dynamic>? fullData;
 
-      if (userDataString != null) {
-        final Map<String, dynamic> fullData = await compute(
+      if (userDataString != null && userDataString.isNotEmpty) {
+        fullData = await compute(
           _decodeJson,
           userDataString,
         );
         // Extract session_data from the existing blob
-        sessionData = fullData['session_data'];
-      }
-
-      if (email == null || password == null) {
-        if (kDebugMode) {
-          debugPrint("❌ Background refresh failed: no credentials");
-        }
-        return false;
+        sessionData = fullData?['session_data'];
       }
 
       final url = Uri.parse(
@@ -56,7 +57,7 @@ class DataRefreshService {
         body: jsonEncode(requestBody),
       );
 
-      debugPrint('[SRM REFRESH] HTTP Status: ');
+      debugPrint('[SRM REFRESH] HTTP Status: ${response.statusCode}');
       if (response.statusCode != 200) {
         if (kDebugMode) {
           debugPrint("❌ Background API failed: ${response.statusCode}");
@@ -65,6 +66,43 @@ class DataRefreshService {
       }
 
       final data = await compute(_decodeJson, response.body);
+      if (data['status'] != 'success') {
+        if (kDebugMode) {
+          debugPrint("❌ Background API returned non-success status: ${data['status']}");
+        }
+        return false;
+      }
+
+      // Safeguard: Never overwrite valid cached academic data with empty or malformed responses
+      if (fullData != null) {
+        final existingAttendanceCourses = fullData['attendance']?['attendance']?['courses'];
+        final bool hadValidAttendance = existingAttendanceCourses is Map && existingAttendanceCourses.isNotEmpty;
+        final newAttendanceCourses = data['attendance']?['attendance']?['courses'];
+        final bool hasNewAttendance = newAttendanceCourses is Map && newAttendanceCourses.isNotEmpty;
+
+        if (hadValidAttendance && !hasNewAttendance) {
+          if (kDebugMode) {
+            debugPrint("⚠ Preserving cached attendance because refreshed payload has empty courses");
+          }
+          if (fullData['attendance'] != null) {
+            data['attendance'] = fullData['attendance'];
+          }
+        }
+
+        final existingTimetableCourses = fullData['timetable']?['courses'];
+        final bool hadValidTimetable = existingTimetableCourses is List && existingTimetableCourses.isNotEmpty;
+        final newTimetableCourses = data['timetable']?['courses'];
+        final bool hasNewTimetable = newTimetableCourses is List && newTimetableCourses.isNotEmpty;
+
+        if (hadValidTimetable && !hasNewTimetable) {
+          if (kDebugMode) {
+            debugPrint("⚠ Preserving cached timetable because refreshed payload has empty timetable");
+          }
+          if (fullData['timetable'] != null) {
+            data['timetable'] = fullData['timetable'];
+          }
+        }
+      }
 
       // 3. Handle Day Order (data -> attendance -> day_order)
       if (data['attendance']?['day_order'] != null) {

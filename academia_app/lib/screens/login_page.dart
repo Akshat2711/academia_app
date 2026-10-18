@@ -136,9 +136,14 @@ class _CLoginPageState extends State<CLoginPage> {
         body: body,
       );
 
-      debugPrint('[SRM AUTH] HTTP Status: ');
+      debugPrint('[SRM AUTH] HTTP Status: ${response.statusCode}');
       if (response.statusCode == 200) {
         final data = await compute(_decodeJson, response.body);
+        if (data['status'] != 'success') {
+          final errorMsg = data['detail'] ?? data['message'] ?? 'Login failed. Please check credentials.';
+          _showErrorBottomSheet(errorMsg.toString());
+          return;
+        }
         final prefs = await SharedPreferences.getInstance();
 
         await prefs.setString('userEmail', email);
@@ -175,7 +180,7 @@ class _CLoginPageState extends State<CLoginPage> {
         try {
           await ApiService().autoResubscribeToClubs(emailPart);
         } catch (e) {
-          print('⚠ Auto-resubscription failed: $e');
+          debugPrint('⚠ Auto-resubscription failed: $e');
           // Continue with login even if auto-resubscription fails
         }
 
