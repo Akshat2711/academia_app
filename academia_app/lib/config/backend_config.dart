@@ -15,10 +15,11 @@ class BackendConfig {
   /// 2. Android emulator loopback to host PC
   /// 3. PC Local Wi-Fi IP address (physical device on same Wi-Fi)
   static const List<String> candidateBaseUrls = [
+    'https://academia-scrapper-api-fast.onrender.com',
     'http://127.0.0.1:8001',
+    'http://10.0.2.2:8001',
     'http://192.168.1.2:8001',
     'http://192.168.1.13:8001',
-    'http://10.0.2.2:8001',
   ];
 
   /// Get custom server URL saved in preferences (if any)
